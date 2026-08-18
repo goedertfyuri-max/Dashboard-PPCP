@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rohden PPCP · Horas por Setor</title>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Bebas+Neue&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#1A1A1A;--bg-2:#212121;--card:#262626;--card-2:#2E2E2E;
+  --border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
+  --wine:#7C162A;--wine-mid:#B32C42;--wine-bright:#C65366;--rose:#D4B0B6;
+  --ok:#3FA372;--warn:#D67610;--late:#C62B3F;--navy:#435D74;--teal:#2E7D6B;
+  --txt:#F2F2F2;--txt-2:#B8B8B8;--muted:#7A7A7A;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--txt);font-family:'Lato',sans-serif;overflow:hidden;height:100vh;}
+::-webkit-scrollbar{width:8px;height:8px;}::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px;}
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:226px;background:#151515;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:.28s;overflow:hidden;}
+.sidebar.collapsed{width:0;border:none;}
+.sb-head{padding:17px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px;}
+.sb-logo{width:31px;height:31px;flex-shrink:0;}
+.sb-brand{font-family:'Red Hat Display';font-weight:900;font-size:16px;line-height:1;}
+.sb-sub{font-size:8.5px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:3px;font-weight:700;}
+.sb-body{flex:1;overflow-y:auto;padding:13px 10px;}
+.sb-title{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.14em;margin:13px 6px 6px;}
+.sb-title:first-child{margin-top:0;}
+.nav-btn{display:flex;align-items:center;gap:9px;width:100%;background:transparent;border:1px solid transparent;color:var(--txt-2);padding:8px 10px;text-align:left;font-size:12.5px;font-weight:700;border-radius:7px;cursor:pointer;transition:.18s;font-family:'Lato';margin-bottom:3px;}
+.nav-btn:hover{background:rgba(255,255,255,.04);color:#fff;}
+.nav-btn.on{background:rgba(178,44,66,.14);color:var(--wine-bright);border-color:rgba(178,44,66,.3);}
+.nav-ico{width:14px;text-align:center;font-size:12px;opacity:.85;}
+.nav-count{margin-left:auto;font-size:10px;background:rgba(255,255,255,.07);padding:1px 7px;border-radius:10px;font-weight:700;}
+.nav-btn.on .nav-count{background:rgba(178,44,66,.3);color:var(--rose);}
+.sb-foot{padding:10px 14px;border-top:1px solid var(--border);font-size:9.5px;color:var(--muted);line-height:1.55;}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{padding:11px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--bg-2);}
+.burger{background:var(--card);border:1px solid var(--border);color:var(--txt);width:33px;height:33px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.burger:hover{border-color:var(--wine-mid);color:var(--wine-bright);}
+.page-t{font-family:'Red Hat Display';font-weight:900;font-size:17px;line-height:1.1;}
+.page-s{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.fld{display:flex;flex-direction:column;gap:3px;}
+.fld label{font-size:8.5px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.1em;}
+select,input[type=text]{background:var(--card);color:var(--txt);border:1px solid var(--border);padding:0 9px;height:31px;border-radius:7px;outline:none;font-size:11.5px;font-family:'Lato';min-width:108px;}
+select:hover,input:focus{border-color:var(--wine-mid);}
+.btn{background:var(--wine);border:1px solid var(--wine-mid);color:#fff;height:31px;padding:0 12px;border-radius:7px;cursor:pointer;font-size:11.5px;font-weight:700;font-family:'Lato';transition:.18s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--wine-mid);}
+.btn-2{background:transparent;border:1px solid var(--border-2);color:var(--txt-2);}
+.btn-2:hover{background:rgba(255,255,255,.06);color:#fff;}
+.src{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);border-radius:7px;padding:0 10px;height:31px;font-size:10.5px;color:var(--txt-2);cursor:pointer;}
+.src-dot{width:6px;height:6px;border-radius:50%;background:var(--warn);}
+.src-dot.live{background:var(--ok);box-shadow:0 0 7px var(--ok);}
+.content{flex:1;overflow-y:auto;padding:15px 18px 26px;}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-bottom:13px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px 13px;position:relative;overflow:hidden;}
+.kpi-glow{position:absolute;top:0;right:0;width:60px;height:60px;border-radius:50%;filter:blur(26px);opacity:.16;}
+.kpi-l{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.09em;margin-bottom:5px;line-height:1.3;}
+.kpi-v{font-family:'Bebas Neue';font-size:29px;line-height:.9;}
+.kpi-u{font-size:12px;color:var(--muted);margin-left:3px;font-family:'Lato';font-weight:700;}
+.kpi-d{font-size:9.5px;color:var(--muted);margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.05);}
+.kpi-d b{color:var(--txt-2);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 15px;}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;}
+.card-t{font-family:'Red Hat Display';font-weight:700;font-size:13.5px;}
+.card-hint{font-size:10px;color:var(--muted);}
+.row{display:grid;gap:10px;margin-bottom:10px;}
+.r-1-1{grid-template-columns:1fr 1fr;}
+.r-2-1{grid-template-columns:2fr 1fr;}
+.tbl-wrap{overflow:auto;max-height:380px;border-radius:8px;}
+table{width:100%;border-collapse:collapse;font-size:11.5px;}
+thead th{position:sticky;top:0;background:var(--card-2);z-index:5;text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.08em;border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+tbody tr:hover{background:rgba(255,255,255,.03);}
+.c-of{font-family:'Red Hat Display';font-weight:700;}
+.c-mut{color:var(--muted);font-size:10.5px;}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:9.5px;font-weight:700;white-space:nowrap;}
+.p-ok{background:rgba(63,163,114,.13);color:var(--ok);border:1px solid rgba(63,163,114,.3);}
+.p-wa{background:rgba(214,118,16,.13);color:var(--warn);border:1px solid rgba(214,118,16,.3);}
+.p-la{background:rgba(198,43,63,.15);color:#E8697A;border:1px solid rgba(198,43,63,.35);}
+.p-nt{background:rgba(255,255,255,.06);color:var(--txt-2);border:1px solid var(--border);}
+.p-tl{background:rgba(46,125,107,.14);color:#4FBFA5;border:1px solid rgba(46,125,107,.3);}
+.ch{width:100%;height:250px;}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:11.5px;}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.inp-h{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--navy);width:70px;height:26px;border-radius:5px;padding:0 7px;font-size:11.5px;font-weight:700;font-family:'Lato';outline:none;text-align:right;}
+.inp-h:focus{border-color:var(--wine-mid);background:rgba(255,255,255,.08);}
+.dv{font-family:'Bebas Neue';font-size:16px;}
+.dv.pos{color:var(--ok);}.dv.neg{color:#E8697A;}
+.bar3{display:flex;flex-direction:column;gap:2px;width:100px;}
+.b3{height:5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;}
+.b3 span{display:block;height:100%;border-radius:3px;}
+.aviso{border:1px solid rgba(214,118,16,.3);background:rgba(214,118,16,.05);border-radius:10px;padding:13px 16px;display:flex;gap:13px;align-items:flex-start;margin-bottom:10px;}
+.aviso.ok{border-color:rgba(63,163,114,.3);background:rgba(63,163,114,.05);}
+.aviso-i{font-size:19px;opacity:.75;flex-shrink:0;}
+.aviso-t{font-family:'Red Hat Display';font-weight:700;font-size:12.5px;margin-bottom:3px;color:var(--warn);}
+.aviso.ok .aviso-t{color:var(--ok);}
+.aviso-d{font-size:11.5px;color:var(--txt-2);line-height:1.6;}
+.aviso-d b{color:#fff;}
+.drop{position:fixed;inset:0;background:rgba(10,10,10,.92);z-index:999;display:none;align-items:center;justify-content:center;}
+.drop.on{display:flex;}
+.drop-in{border:2px dashed var(--wine-bright);border-radius:16px;padding:54px 74px;text-align:center;}
+.drop-t{font-family:'Red Hat Display';font-weight:900;font-size:21px;margin-bottom:8px;}
+.drop-s{font-size:12.5px;color:var(--muted);line-height:1.7;}
+.modal{position:fixed;inset:0;background:rgba(8,8,8,.75);z-index:998;display:none;align-items:center;justify-content:center;padding:38px;}
+.modal.on{display:flex;}
+.modal-in{background:var(--card);border:1px solid var(--border-2);border-radius:14px;padding:21px 23px;width:100%;max-width:860px;max-height:82vh;overflow-y:auto;}
+.modal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;}
+.modal-t{font-family:'Red Hat Display';font-weight:900;font-size:18px;}
+.modal-x{background:transparent;border:1px solid var(--border);color:var(--txt-2);width:29px;height:29px;border-radius:7px;cursor:pointer;font-size:14px;}
+.modal-x:hover{border-color:var(--wine-mid);color:#fff;}
+.sel-map{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--txt);height:27px;border-radius:6px;padding:0 8px;font-size:11px;font-family:'Lato';min-width:150px;}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--wine);color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;font-family:'Lato';z-index:1000;opacity:0;transition:.3s;pointer-events:none;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.hidden{display:none;}
+@media(max-width:1500px){.kpis{grid-template-columns:repeat(3,1fr);}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sb">
+    <div class="sb-head">
+      <img src="data:image/png;base64,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" class="sb-logo" alt="Rohden">
+      <div><div class="sb-brand">Rohden</div><div class="sb-sub">PPCP</div></div>
+    </div>
+    <div class="sb-body">
+      <div class="sb-title">Análise</div>
+      <button class="nav-btn on" data-v="setores" onclick="setView('setores',this)"><span class="nav-ico">▤</span>Horas por Setor</button>
+      <button class="nav-btn" data-v="pedidos" onclick="setView('pedidos',this)"><span class="nav-ico">◧</span>Pedidos<span class="nav-count" id="cPed">—</span></button>
+      <button class="nav-btn" data-v="apont" onclick="setView('apont',this)"><span class="nav-ico">◔</span>Apontamentos<span class="nav-count" id="cAp">—</span></button>
+      <button class="nav-btn" data-v="ofs" onclick="setView('ofs',this)"><span class="nav-ico">☰</span>Ordens de Fabricação<span class="nav-count" id="cOfs">—</span></button>
+      <button class="nav-btn" data-v="quali" onclick="setView('quali',this)"><span class="nav-ico">⚠</span>Qualidade do Dado<span class="nav-count" id="cQual">—</span></button>
+      <div class="sb-title">Configuração</div>
+      <button class="nav-btn" onclick="abreSetores()"><span class="nav-ico">⌗</span>Setores<span class="nav-count" id="cMap">—</span></button>
+      <button class="nav-btn" onclick="abreBase()"><span class="nav-ico">▣</span>Base de dados</button>
+      <div class="sb-title">Modelos</div>
+      <div id="navMod"></div>
+    </div>
+    <div class="sb-foot" id="sbFoot">—</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="burger" onclick="toggleSb()">☰</button>
+      <div>
+        <div class="page-t" id="pgT">Horas por Setor</div>
+        <div class="page-s" id="pgS">Realizado × planejado × média por modelo de equipamento</div>
+      </div>
+      <div class="tb-right">
+        <div class="fld"><label>Modelo</label>
+          <select id="fMod" onchange="popularProj();render()"><option value="ALL">Todos</option></select></div>
+        <div class="fld"><label>Projeto</label>
+          <select id="fProj" onchange="render()"><option value="ALL">Todos</option></select></div>
+        <div class="fld"><label>Buscar</label>
+          <input type="text" id="fQ" placeholder="OF, cliente, peça…" onkeyup="render()"></div>
+        <div class="src" onclick="abreBase()"><span class="src-dot" id="srcDot"></span><span id="srcTxt">—</span></div>
+        <button class="btn" onclick="document.getElementById('file').click()">⬆ Adicionar relatório</button>
+        <input type="file" id="file" accept=".xls,.xlsx,.csv" multiple style="display:none" onchange="lerArquivos(this.files);this.value='';">
+        <input type="file" id="fileBase" accept=".json" style="display:none" onchange="importaBase(this.files[0]);this.value='';">
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="vSetores">
+        <div class="kpis" id="kSet"></div>
+        <div class="aviso" id="avSet"></div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="card-h"><div class="card-t">Horas por setor</div>
+            <div class="card-hint">realizado do pedido · planejado · média dos concluídos</div></div>
+          <div class="ch" id="chSet" style="height:300px"></div>
+        </div>
+        <div class="row r-2-1">
+          <div class="card">
+            <div class="card-h"><div class="card-t">Detalhamento e planejamento</div>
+              <div style="display:flex;gap:7px">
+                <button class="btn btn-2" onclick="planoDaMedia()">↺ Usar média</button>
+                <button class="btn btn-2" onclick="exportaBase()">⬇ Exportar</button>
+              </div></div>
+            <div class="tbl-wrap" style="max-height:340px"><table>
+              <thead><tr><th>Setor</th><th>Realizado</th><th>Planejado</th><th>Média</th>
+                <th>Faixa</th><th>n</th><th>Desvio</th><th>Comparativo</th><th>%</th></tr></thead>
+              <tbody id="setBody"></tbody></table></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div class="card-t">Composição</div><div class="card-hint">% das horas</div></div>
+            <div class="ch" id="chPie" style="height:340px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="vPedidos" class="hidden">
+        <div class="kpis" id="kPed" style="grid-template-columns:repeat(5,1fr)"></div>
+        <div class="card" style="margin-bottom:10px">
+          <div class="card-h"><div class="card-t">Fluxo dos pedidos</div>
+            <div class="card-hint">etapa = último setor com apontamento</div></div>
+          <div style="display:flex;gap:7px;overflow-x:auto" id="flowPed"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="card-t">Pedidos</div><div class="card-hint" id="pedCount">—</div></div>
+          <div class="tbl-wrap" style="max-height:400px"><table>
+            <thead><tr><th>Projeto</th><th>Cliente</th><th>Modelo</th><th>Etapa atual</th>
+              <th>OFs</th><th>Realizado</th><th>Planejado</th><th>Média</th><th>Desvio</th>
+              <th>Início</th><th>Lead</th></tr></thead>
+            <tbody id="pedBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <div id="vApont" class="hidden">
+        <div class="kpis" id="kAp" style="grid-template-columns:repeat(5,1fr)"></div>
+        <div class="row r-1-1">
+          <div class="card"><div class="card-h"><div class="card-t">Horas por dia</div>
+            <div class="card-hint">horas-homem apontadas</div></div><div class="ch" id="chDia"></div></div>
+          <div class="card"><div class="card-h"><div class="card-t">Horas por centro de custo</div>
+            <div class="card-hint">agrupamento contábil do Evolutize</div></div><div class="ch" id="chCC"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="card-t">Lançamentos</div><div class="card-hint" id="apCount">—</div></div>
+          <div class="tbl-wrap" style="max-height:400px"><table>
+            <thead><tr><th>OF</th><th>Peça</th><th>Centro de custo</th><th>Atividade</th>
+              <th>Setor</th><th>Data</th><th>Início</th><th>Fim</th><th>Horas</th></tr></thead>
+            <tbody id="apBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <div id="vOfs" class="hidden">
+        <div class="kpis" id="kOfs" style="grid-template-columns:repeat(5,1fr)"></div>
+        <div class="card">
+          <div class="card-h"><div class="card-t">Ordens de Fabricação</div><div class="card-hint" id="ofsCount">—</div></div>
+          <div class="tbl-wrap" style="max-height:520px"><table>
+            <thead><tr><th>OF</th><th>Nível</th><th>Modelo</th><th>Conjunto</th><th>Descrição</th>
+              <th>Emissão</th><th>Conclusão</th><th>Setores</th><th>Horas</th><th>Situação</th></tr></thead>
+            <tbody id="ofsBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <div id="vQuali" class="hidden">
+        <div class="kpis" id="kQual" style="grid-template-columns:repeat(4,1fr)"></div>
+        <div class="row r-1-1">
+          <div class="card"><div class="card-h"><div class="card-t">Encerradas sem apontamento</div>
+            <div class="card-hint" id="qtdSemT">—</div></div>
+            <div class="tbl-wrap" style="max-height:320px"><table>
+              <thead><tr><th>OF</th><th>Conjunto</th><th>Descrição</th><th>Qtd</th></tr></thead>
+              <tbody id="qualBody"></tbody></table></div></div>
+          <div class="card"><div class="card-h"><div class="card-t">OFs canceladas</div>
+            <div class="card-hint" id="qtdCanc">—</div></div>
+            <div class="tbl-wrap" style="max-height:320px"><table>
+              <thead><tr><th>OF</th><th>Conjunto</th><th>Descrição</th><th>Qtd</th></tr></thead>
+              <tbody id="cancBody"></tbody></table></div></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div class="card-t">Apontamentos sem OF correspondente</div>
+            <div class="card-hint">horas lançadas em OFs fora da base de estrutura</div></div>
+          <div class="tbl-wrap" style="max-height:240px"><table>
+            <thead><tr><th>OF</th><th>Centro de custo</th><th>Atividade</th><th>Data</th><th>Horas</th></tr></thead>
+            <tbody id="orfBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="drop" id="drop"><div class="drop-in">
+  <div class="drop-t">Solte os relatórios aqui</div>
+  <div class="drop-s">Estrutura de Produto · Horas Apontadas<br>Vários de uma vez — o tipo é detectado automaticamente</div>
+</div></div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)fechaModal()">
+  <div class="modal-in">
+    <div class="modal-h"><div class="modal-t" id="modalTit">—</div>
+      <button class="modal-x" onclick="fechaModal()">✕</button></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   DOIS RELATÓRIOS DO EVOLUTIZE, LIGADOS PELO NÚMERO DA OF
+   1) Estrutura de Produto — projeto, cliente, modelo, conjunto,
+      situação e datas de cada OF.
+   2) Horas Apontadas      — quanto tempo cada setor gastou em
+      cada OF, com atividade, funcionário e data.
+   O tipo é detectado pelas colunas. Ambos se acumulam.
+   ══════════════════════════════════════════════════════════ */
+const C_EST={of:'OF',conj:'Descrição',prod:'Produto',desc:'Descrição do Produto',
+  dOF:'Data da OF',dFim:'Data da Conclusão',sitProd:'Situação Produção',
+  sitBaixa:'Situação Baixa Material',qtdP:'Quantidade a Produzir',
+  qtdF:'Quantidade a Produzida',tempo:'Tempo Produção',proj:'Projeto',
+  descProj:'Descrição Projeto',cli:'Nome do Cliente',pv:'Pedido de Venda',tipo:'Tipo de Produção'};
+const COLS_EST=Object.values(C_EST);
+
+const C_AP={of:'OF',cc:'Descrição Centro de Custo',ccCod:'Centro de Custo',
+  ativ:'Descrição da Atividade',func:'Nome Funcionário',funcCod:'Funcionário',
+  data:'Data',ini:'Inicio',fim:'Final',desc:'Descrição',tempo:'Tempo',prod:'Produto'};
+const COLS_AP=['OF','Centro de Custo','Descrição Centro de Custo','Funcionário','Nome Funcionário',
+  'Data','Inicio','Final','Produto','Descrição','Descrição da Atividade','Tempo'];
+
+/* ── SETORES ──
+   Vêm da ATIVIDADE do apontamento, que é mais precisa que o centro
+   de custo: ACABAMENTO e PINTURA saem juntos no centro PINTURA. */
+let SETORES=['Laser','Serra','Dobra','Usinagem','Pré-montagem','Solda','Montagem',
+  'Acabamento','Pintura','Embalagem','Expedição','Terceirização'];
+try{const s=JSON.parse(localStorage.getItem('roh4_setores')||'null');if(s&&s.length)SETORES=s;}catch(e){}
+
+const ALIAS_SET=[
+  {alvo:'Laser',        re:/LASER|PLASMA/i},
+  {alvo:'Serra',        re:/SERRA/i},
+  {alvo:'Dobra',        re:/DOBRA|CALANDR/i},
+  {alvo:'Usinagem',     re:/FURAR|USINAG|TORNO|FRESA/i},
+  {alvo:'Pré-montagem', re:/PR[EÉ].?.?MONTAGEM/i},
+  {alvo:'Solda',        re:/SOLDA/i},
+  {alvo:'Montagem',     re:/MONTAGEM/i},
+  {alvo:'Acabamento',   re:/ACABAMENTO|LIXADEIRA|ESMERIL/i},
+  {alvo:'Pintura',      re:/PINTURA|JATO/i},
+  {alvo:'Embalagem',    re:/EMBALAGEM/i},
+  {alvo:'Expedição',    re:/CARREGAMENTO|EXPEDI/i},
+  {alvo:'Terceirização',re:/TERCEIRIZ/i}
+];
+let MAPA_SET={};
+try{MAPA_SET=JSON.parse(localStorage.getItem('roh4_mapaset')||'{}');}catch(e){}
+function normSetor(ativ,cc){
+  const k=String(ativ||'').trim();
+  if(MAPA_SET[k])return MAPA_SET[k];
+  for(const a of ALIAS_SET) if(a.re.test(k)) return a.alvo;
+  for(const a of ALIAS_SET) if(a.re.test(String(cc||''))) return a.alvo;
+  return k||'—';
+}
+const ehSetor=s=>SETORES.includes(s);
+
+const RE_MOD=/\b(\d+\s?RT[AM])\b/i;
+const modeloDe=(...t)=>{for(const x of t){const m=RE_MOD.exec(String(x||''));
+  if(m)return m[1].replace(/\s/g,'').toUpperCase();}return 'Outros';};
+const RE_PAI=/CONJUNTO\s+GERAL|QUEIMADOR\s+DE\s+BIOMASSA/i;
+const RE_SUB=/^(CJ\b|CONJ\b|CONJUNTO\b|CORPO\s+SOLDADO|KIT\b|MODULO|MÓDULO)/i;
+const nivelDe=d=>RE_PAI.test(d)?'Produto pai':(RE_SUB.test(d)?'Subconjunto':'Peça');
+
+let PLANO={};
+try{PLANO=JSON.parse(localStorage.getItem('roh4_plano')||'{}');}catch(e){}
+const salvaCfg=()=>{try{
+  localStorage.setItem('roh4_plano',JSON.stringify(PLANO));
+  localStorage.setItem('roh4_setores',JSON.stringify(SETORES));
+  localStorage.setItem('roh4_mapaset',JSON.stringify(MAPA_SET));
+}catch(e){}};
+const planoDe=(m,s)=>(PLANO[m]||{})[s]||0;
+const planoTotal=m=>Object.values(PLANO[m]||{}).reduce((a,b)=>a+(+b||0),0);
+
+let RAW_EST=[],RAW_AP=[],ORIGENS=[],OFS=[],APONT=[];
+
+function salvaBase(){
+  try{
+    localStorage.setItem('roh4_est',JSON.stringify(RAW_EST.map(r=>COLS_EST.map(c=>r[c]??''))));
+    localStorage.setItem('roh4_ap',JSON.stringify(RAW_AP.map(r=>COLS_AP.map(c=>r[c]??''))));
+    localStorage.setItem('roh4_orig',JSON.stringify(ORIGENS));
+  }catch(e){toast('⚠ Base grande — exporte o JSON');}
+}
+function carregaBase(){
+  try{
+    const e=JSON.parse(localStorage.getItem('roh4_est')||'null');
+    const a=JSON.parse(localStorage.getItem('roh4_ap')||'null');
+    const o=JSON.parse(localStorage.getItem('roh4_orig')||'null');
+    if(e&&e.length){
+      RAW_EST=e.map(x=>Object.fromEntries(COLS_EST.map((k,i)=>[k,x[i]])));
+      RAW_AP=(a||[]).map(x=>Object.fromEntries(COLS_AP.map((k,i)=>[k,x[i]])));
+      ORIGENS=o||[];return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n;};
+function dt(s){const m=String(s||'').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return m?new Date(+m[3],+m[2]-1,+m[1]):null;}
+const fmtD=d=>d?d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'—';
+const h1=v=>(+v).toFixed(1).replace('.',',');
+const h2=v=>(+v).toFixed(2).replace('.',',');
+
+function reconstruir(){
+  OFS=RAW_EST.map(r=>{
+    const of=String(r[C_EST.of]||'').trim();
+    if(!/^\d+$/.test(of))return null;
+    const conjFull=String(r[C_EST.conj]||'').trim();
+    const conj=conjFull.split(' - ')[0].trim()||'—';
+    const desc=String(r[C_EST.desc]||'').trim();
+    const dp=String(r[C_EST.descProj]||'').trim();
+    return {of,
+      modelo:modeloDe(conj,desc,conjFull,dp),
+      conjunto:conj.replace(RE_MOD,'').replace(/\s{2,}/g,' ').trim().replace(/^[.\-\s]+|[.\-\s]+$/g,'')||conj,
+      produto:String(r[C_EST.prod]||'').trim(),desc,nivel:nivelDe(desc),
+      dOF:dt(r[C_EST.dOF]),dFim:dt(r[C_EST.dFim]),
+      sit:String(r[C_EST.sitProd]||'').trim(),
+      qtdP:num(r[C_EST.qtdP]),qtdF:num(r[C_EST.qtdF]),
+      projeto:String(r[C_EST.proj]||'').trim(),descProj:dp,
+      cliente:String(r[C_EST.cli]||'').trim(),pv:String(r[C_EST.pv]||'').trim(),
+      tipo:String(r[C_EST.tipo]||'').trim()};
+  }).filter(Boolean);
+
+  const idx={};OFS.forEach(o=>idx[o.of]=o);
+
+  APONT=RAW_AP.map(r=>{
+    const of=String(r[C_AP.of]||'').trim();
+    if(!/^\d+$/.test(of))return null;
+    const o=idx[of];
+    const ativ=String(r[C_AP.ativ]||'').trim();
+    const cc=String(r[C_AP.cc]||'').trim();
+    return {of,ativ,cc,setor:normSetor(ativ,cc),
+      func:String(r[C_AP.func]||'').trim(),
+      data:dt(r[C_AP.data]),ini:String(r[C_AP.ini]||'').trim(),
+      fim:String(r[C_AP.fim]||'').trim(),
+      pecaDesc:String(r[C_AP.desc]||'').trim(),
+      horas:num(r[C_AP.tempo]),
+      projeto:o?o.projeto:null,modelo:o?o.modelo:null,
+      cliente:o?o.cliente:null,orfa:!o};
+  }).filter(Boolean);
+
+  popular();render();
+}
+
+function detecta(js){
+  const k=Object.keys(js[0]||{}).map(x=>String(x).trim());
+  if(k.includes('Descrição Centro de Custo')||k.includes('Descrição da Atividade'))return 'apont';
+  if(k.includes('Situação Produção')||k.includes('Data da OF'))return 'estrutura';
+  return null;
+}
+function acumular(js,nome){
+  const tipo=detecta(js);
+  if(!tipo)return {tipo:null,novas:0,dup:0};
+  let novas=0,dup=0;
+  if(tipo==='estrutura'){
+    const ex=new Set(RAW_EST.map(r=>String(r[C_EST.of]).trim()));
+    js.forEach(r=>{
+      const of=String(r[C_EST.of]||'').trim();
+      if(!/^\d+$/.test(of))return;
+      if(ex.has(of)){dup++;return;}
+      ex.add(of);RAW_EST.push(Object.fromEntries(COLS_EST.map(c=>[c,r[c]??''])));novas++;
+    });
+  }else{
+    const chave=r=>[r[C_AP.of],r[C_AP.funcCod],r[C_AP.data],r[C_AP.ini],r[C_AP.ativ]].join('|');
+    const ex=new Set(RAW_AP.map(chave));
+    js.forEach(r=>{
+      const of=String(r[C_AP.of]||'').trim();
+      if(!/^\d+$/.test(of))return;
+      const k=chave(r);
+      if(ex.has(k)){dup++;return;}
+      ex.add(k);RAW_AP.push(Object.fromEntries(COLS_AP.map(c=>[c,r[c]??''])));novas++;
+    });
+  }
+  ORIGENS.push({arq:nome,tipo,quando:new Date().toISOString(),novas,dup});
+  salvaBase();
+  return {tipo,novas,dup};
+}
+
+function lerArquivos(fl){
+  if(!fl||!fl.length)return;
+  const arq=[...fl];let feitos=0;const res=[];
+  arq.forEach(f=>{
+    const rd=new FileReader();
+    rd.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const js=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+        if(js.length)res.push({...acumular(js,f.name),arq:f.name});
+      }catch(err){console.warn(err);res.push({tipo:null,arq:f.name});}
+      if(++feitos===arq.length){
+        reconstruir();atualizaFonte();
+        const ok=res.filter(r=>r.tipo),ruim=res.filter(r=>!r.tipo);
+        let m=ok.map(r=>`${r.novas} ${r.tipo==='apont'?'apontamentos':'OFs'}`).join(' · ');
+        if(ruim.length)m+=(m?' · ':'')+`${ruim.length} não reconhecido(s)`;
+        toast(m||'Nada carregado');
+      }
+    };
+    rd.readAsArrayBuffer(f);
+  });
+}
+function atualizaFonte(){
+  const np=new Set(OFS.map(o=>o.projeto).filter(Boolean)).size;
+  document.getElementById('srcTxt').textContent=`${OFS.length} OFs · ${np} proj`;
+  document.getElementById('srcDot').classList.toggle('live',APONT.length>0);
+  document.getElementById('sbFoot').innerHTML=APONT.length
+    ?`Estrutura + apontamento<br><span style="color:var(--ok)">✓ ${APONT.length} lançamentos</span>`
+    :`<span style="color:var(--warn)">Falta o relatório de<br>Horas Apontadas</span>`;
+}
+function toast(m){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=m;t.className='toast on';
+  clearTimeout(t._h);t._h=setTimeout(()=>t.className='toast',3400);
+}
+
+function filtroOFs(){
+  const m=document.getElementById('fMod').value,p=document.getElementById('fProj').value;
+  const q=document.getElementById('fQ').value.toLowerCase().trim();
+  return OFS.filter(o=>{
+    if(m!=='ALL'&&o.modelo!==m)return false;
+    if(p!=='ALL'&&o.projeto!==p)return false;
+    if(q&&!(o.of+o.conjunto+o.desc+o.cliente+o.produto).toLowerCase().includes(q))return false;
+    return true;});
+}
+function filtroAp(){
+  const m=document.getElementById('fMod').value,p=document.getElementById('fProj').value;
+  const q=document.getElementById('fQ').value.toLowerCase().trim();
+  return APONT.filter(a=>{
+    if(m!=='ALL'&&a.modelo!==m)return false;
+    if(p!=='ALL'&&a.projeto!==p)return false;
+    if(q&&!(a.of+(a.pecaDesc||'')+(a.cliente||'')+a.setor).toLowerCase().includes(q))return false;
+    return true;});
+}
+
+function pedidos(){
+  const g={};
+  OFS.forEach(o=>{const k=o.projeto||o.pv||'—';
+    g[k]=g[k]||{projeto:k,pv:o.pv,cliente:o.cliente,modelo:o.modelo,ofs:[]};g[k].ofs.push(o);});
+  const ap={};APONT.forEach(a=>{if(a.projeto)(ap[a.projeto]=ap[a.projeto]||[]).push(a);});
+  return Object.values(g).map(p=>{
+    const A=ap[p.projeto]||[];
+    const viv=p.ofs.filter(o=>o.sit!=='Cancelado');
+    const enc=p.ofs.filter(o=>o.sit==='Encerrado');
+    const porSetor={};A.forEach(a=>porSetor[a.setor]=(porSetor[a.setor]||0)+a.horas);
+    let ult=null;SETORES.forEach(s=>{if(porSetor[s]>0)ult=s;});
+    const paiOk=p.ofs.some(o=>o.nivel==='Produto pai'&&o.sit==='Encerrado');
+    const dOFs=p.ofs.map(o=>o.dOF).filter(Boolean);
+    const cont={};dOFs.forEach(d=>{const k=d.getTime();cont[k]=(cont[k]||0)+1;});
+    const onda=Object.entries(cont).sort((a,b)=>b[1]-a[1])[0];
+    const ini=onda?new Date(+onda[0]):null;
+    const fins=enc.map(o=>o.dFim).filter(Boolean);
+    const fim=fins.length?new Date(Math.max(...fins)):null;
+    return {...p,porSetor,hReal:A.reduce((a,b)=>a+b.horas,0),hPlan:planoTotal(p.modelo),
+      etapa:paiOk?'Concluído':(ult||'Aguardando'),concluido:paiOk,
+      ofsViv:viv.length,ofsEnc:enc.length,canc:p.ofs.length-viv.length,
+      ini,fim,lead:(ini&&fim)?Math.round((fim-ini)/86400000):null};
+  }).sort((a,b)=>(b.ini||0)-(a.ini||0));
+}
+function mediaModelo(mod){
+  const ps=pedidos().filter(p=>p.modelo===mod&&p.concluido);
+  if(!ps.length)return {n:0,horas:0,lead:0,porSetor:{}};
+  const acc={};
+  ps.forEach(p=>Object.entries(p.porSetor).forEach(([s,h])=>{(acc[s]=acc[s]||[]).push(h);}));
+  const porSetor={};
+  Object.entries(acc).forEach(([s,v])=>{porSetor[s]={
+    media:v.reduce((a,b)=>a+b,0)/ps.length,min:Math.min(...v),max:Math.max(...v),n:v.length};});
+  const l=ps.map(p=>p.lead).filter(v=>v!=null);
+  return {n:ps.length,horas:ps.reduce((a,b)=>a+b.hReal,0)/ps.length,
+    lead:l.length?l.reduce((a,b)=>a+b,0)/l.length:0,porSetor};
+}
+function kpi(alvo,cards){
+  document.getElementById(alvo).innerHTML=cards.map(k=>`
+    <div class="kpi"><div class="kpi-glow" style="background:${k.c}"></div>
+      <div class="kpi-l">${k.l}</div><div class="kpi-v" style="color:${k.c}">${k.v}</div>
+      <div class="kpi-d">${k.d}</div></div>`).join('');
+}
+
+/* ══ HORAS POR SETOR ══ */
+function renderSetores(){
+  const mod=document.getElementById('fMod').value;
+  const projSel=document.getElementById('fProj').value;
+  const av=document.getElementById('avSet');
+
+  if(!APONT.length){
+    av.className='aviso';
+    av.innerHTML=`<div class="aviso-i">⚠</div><div>
+      <div class="aviso-t">Falta o relatório de Horas Apontadas</div>
+      <div class="aviso-d">A base tem a estrutura de produto, mas as horas por setor vêm do relatório <b>Horas Apontadas</b> do Evolutize. Carregue-o para liberar esta análise.</div></div>`;
+    kpi('kSet',[{l:'Setores',v:'—',d:'sem apontamento',c:'var(--muted)'}]);
+    document.getElementById('setBody').innerHTML='<tr><td colspan="9" class="empty">Sem apontamento.</td></tr>';
+    return;
+  }
+
+  const P=pedidos().filter(p=>mod==='ALL'||p.modelo===mod);
+  const alvo=projSel!=='ALL'?P.find(p=>p.projeto===projSel):(P.find(p=>!p.concluido)||P[0]);
+  const md=mod!=='ALL'?mediaModelo(mod):{n:0,porSetor:{},horas:0,lead:0};
+  const real=alvo?alvo.porSetor:{};
+  const lista=[...new Set([...SETORES,...Object.keys(real),...Object.keys(md.porSetor)])]
+    .filter(s=>real[s]||md.porSetor[s]||planoDe(mod,s))
+    .sort((a,b)=>{const ia=SETORES.indexOf(a),ib=SETORES.indexOf(b);
+      return (ia<0?99:ia)-(ib<0?99:ib);});
+  const tReal=Object.values(real).reduce((a,b)=>a+b,0);
+  const tPlan=mod!=='ALL'?planoTotal(mod):0;
+  const dv=tPlan?Math.round((tReal/tPlan-1)*100):null;
+  const maior=lista.reduce((a,s)=>(real[s]||0)>(real[a]||0)?s:a,lista[0]||'—');
+
+  kpi('kSet',[
+    {l:'Modelo',v:mod==='ALL'?'Todos':mod,d:alvo?`<b>${alvo.projeto}</b> · ${(alvo.cliente||'').slice(0,14)}`:'—',c:'var(--wine-bright)'},
+    {l:'Realizado',v:h1(tReal),d:alvo?alvo.etapa:'—',c:'var(--wine-bright)'},
+    {l:'Planejado',v:tPlan?h1(tPlan):'—',d:tPlan?'definido pelo PPCP':'preencha na tabela',c:'var(--navy)'},
+    {l:'Média do Modelo',v:md.n?h1(md.horas):'—',d:md.n?`<b>${md.n}</b> concluído(s)`:'sem histórico',c:'var(--rose)'},
+    {l:'Desvio vs Plano',v:dv===null?'—':(dv>0?'+':'')+dv+'<span class="kpi-u">%</span>',d:'realizado sobre planejado',
+      c:dv===null?'var(--muted)':(dv>8?'var(--late)':(dv<-8?'var(--ok)':'var(--warn)'))},
+    {l:'Maior Setor',v:h1(real[maior]||0),d:`<b>${maior}</b>`,c:'var(--warn)'}
+  ]);
+
+  if(mod==='ALL'){
+    av.className='aviso';
+    av.innerHTML=`<div class="aviso-i">◆</div><div>
+      <div class="aviso-t">Selecione um modelo para comparar</div>
+      <div class="aviso-d">O planejado e a média são por modelo de equipamento. Escolha <b>2RTA</b>, <b>4RTA</b> ou outro no filtro acima.</div></div>`;
+  }else if(md.n<3){
+    av.className='aviso';
+    av.innerHTML=`<div class="aviso-i">⚠</div><div>
+      <div class="aviso-t">Amostra pequena: ${md.n} pedido(s) concluído(s) de ${mod}</div>
+      <div class="aviso-d">Para a média virar base de planejamento, carregue os relatórios de outros ${mod} já entregues. Com <b>3 a 5 pedidos</b> a faixa mín–máx começa a fazer sentido.</div></div>`;
+  }else{
+    av.className='aviso ok';
+    av.innerHTML=`<div class="aviso-i">✓</div><div>
+      <div class="aviso-t">Base de ${md.n} pedidos concluídos de ${mod}</div>
+      <div class="aviso-d">Média de <b>${h1(md.horas)}h</b> por equipamento e lead de <b>${Math.round(md.lead)} dias</b>. A faixa mín–máx mostra quais setores são estáveis e quais variam entre pedidos.</div></div>`;
+  }
+
+  ci('chSet').setOption({
+    grid:{left:8,right:16,top:32,bottom:4,containLabel:true},
+    tooltip:{trigger:'axis',...TT,valueFormatter:v=>v?h2(v)+'h':'—'},
+    legend:{data:['Realizado','Planejado','Média'],textStyle:{color:'#B8B8B8',fontSize:11},top:0,right:0,itemWidth:11,itemHeight:11},
+    xAxis:{type:'category',data:lista,...AX,axisLabel:{...AX.axisLabel,rotate:26,fontSize:10}},
+    yAxis:{type:'value',...AX,name:'horas',nameTextStyle:{color:'#7A7A7A',fontSize:10}},
+    series:[
+      {name:'Realizado',type:'bar',barWidth:'26%',data:lista.map(s=>+(real[s]||0).toFixed(2)),
+        itemStyle:{color:'#C65366',borderRadius:[3,3,0,0]},
+        label:{show:true,position:'top',color:'#B8B8B8',fontSize:9,formatter:p=>p.value?p.value.toFixed(0):''}},
+      {name:'Planejado',type:'bar',barWidth:'26%',data:lista.map(s=>+(planoDe(mod,s)||0).toFixed(2)),
+        itemStyle:{color:'#435D74',borderRadius:[3,3,0,0]}},
+      {name:'Média',type:'line',data:lista.map(s=>+(md.porSetor[s]?.media||0).toFixed(2)),
+        lineStyle:{color:'#D4B0B6',width:2,type:'dashed'},itemStyle:{color:'#D4B0B6'},symbolSize:6}
+    ]});
+
+  ci('chPie').setOption({
+    tooltip:{...TT,formatter:p=>`${p.name}<br><b>${h2(p.value)}h</b> (${p.percent}%)`},
+    legend:{type:'scroll',bottom:0,textStyle:{color:'#B8B8B8',fontSize:10},itemWidth:9,itemHeight:9},
+    series:[{type:'pie',radius:['40%','66%'],center:['50%','42%'],
+      itemStyle:{borderColor:'#262626',borderWidth:2},
+      label:{show:true,color:'#B8B8B8',fontSize:10,formatter:'{d}%'},
+      data:lista.filter(s=>real[s]>0).map((s,i)=>({name:s,value:+real[s].toFixed(2),
+        itemStyle:{color:PAL[i%PAL.length]}}))}]});
+
+  document.getElementById('setBody').innerHTML=lista.length?lista.map(s=>{
+    const r=real[s]||0,pl=planoDe(mod,s),m=md.porSetor[s];
+    const d=pl?Math.round((r/pl-1)*100):null;
+    const mx=Math.max(r,pl,m?.media||0,.01);
+    return `<tr>
+      <td style="font-weight:700">${s}</td>
+      <td style="color:var(--wine-bright);font-weight:700">${r?h2(r)+'h':'—'}</td>
+      <td><input class="inp-h" type="number" step="0.5" min="0" value="${pl||''}" placeholder="0"
+           ${mod==='ALL'?'disabled':''} onchange="setPlano('${mod}','${s}',this.value)"></td>
+      <td style="color:var(--rose)">${m?h2(m.media)+'h':'—'}</td>
+      <td class="c-mut">${m&&m.n>1?h1(m.min)+'–'+h1(m.max):'—'}</td>
+      <td class="c-mut">${m?m.n:'—'}</td>
+      <td>${d===null?'<span style="color:var(--muted)">—</span>':`<span class="dv ${d>0?'neg':'pos'}">${d>0?'+':''}${d}%</span>`}</td>
+      <td><div class="bar3">
+        <div class="b3"><span style="width:${r/mx*100}%;background:#C65366"></span></div>
+        <div class="b3"><span style="width:${pl/mx*100}%;background:#435D74"></span></div>
+        <div class="b3"><span style="width:${(m?.media||0)/mx*100}%;background:rgba(212,176,182,.6)"></span></div>
+      </div></td>
+      <td class="c-mut">${tReal?(r/tReal*100).toFixed(0)+'%':'—'}</td></tr>`;
+  }).join(''):'<tr><td colspan="9" class="empty">Sem dados.</td></tr>';
+}
+function setPlano(mod,s,v){
+  if(mod==='ALL')return;
+  PLANO[mod]=PLANO[mod]||{};
+  const n=parseFloat(String(v).replace(',','.'));
+  if(!n||n<=0)delete PLANO[mod][s];else PLANO[mod][s]=n;
+  salvaCfg();render();
+}
+function planoDaMedia(){
+  const mod=document.getElementById('fMod').value;
+  if(mod==='ALL'){alert('Selecione um modelo primeiro.');return;}
+  const md=mediaModelo(mod);
+  if(!md.n){alert('Ainda não há pedidos concluídos deste modelo.');return;}
+  PLANO[mod]={};
+  Object.entries(md.porSetor).forEach(([s,v])=>{PLANO[mod][s]=+v.media.toFixed(2);});
+  salvaCfg();render();toast('Planejado preenchido com a média de '+md.n+' pedido(s)');
+}
+
+/* ══ PEDIDOS ══ */
+function renderPedidos(){
+  const m=document.getElementById('fMod').value;
+  const P=pedidos().filter(p=>m==='ALL'||p.modelo===m);
+  const conc=P.filter(p=>p.concluido),and=P.filter(p=>!p.concluido);
+  const l=conc.map(p=>p.lead).filter(v=>v!=null);
+  kpi('kPed',[
+    {l:'Pedidos',v:P.length,d:`<b>${and.length}</b> em produção · <b>${conc.length}</b> concluídos`,c:'var(--wine-bright)'},
+    {l:'Em Produção',v:and.length,d:`<b>${h1(and.reduce((a,b)=>a+b.hReal,0))}h</b> apontadas`,c:'var(--warn)'},
+    {l:'Concluídos',v:conc.length,d:conc.length?`média <b>${h1(conc.reduce((a,b)=>a+b.hReal,0)/conc.length)}h</b>`:'—',c:'var(--ok)'},
+    {l:'Lead Médio',v:l.length?Math.round(l.reduce((a,b)=>a+b,0)/l.length):'—',d:'dias corridos',c:'var(--navy)'},
+    {l:'Modelos',v:new Set(P.map(p=>p.modelo)).size,d:'na base',c:'var(--teal)'}
+  ]);
+  const et={};P.forEach(p=>et[p.etapa]=(et[p.etapa]||0)+1);
+  const ord=['Aguardando',...SETORES,'Concluído'].filter(e=>et[e]);
+  document.getElementById('flowPed').innerHTML=ord.map(e=>{
+    const cor=e==='Concluído'?'var(--ok)':(e==='Aguardando'?'var(--muted)':'var(--wine-bright)');
+    return `<div style="flex:1;min-width:96px;background:var(--card-2);border:1px solid var(--border);border-radius:9px;padding:11px 12px">
+      <div style="font-size:9.5px;color:var(--txt-2);font-weight:700;text-transform:uppercase;margin-bottom:6px">${e}</div>
+      <div style="font-family:'Bebas Neue';font-size:26px;color:${cor}">${et[e]}</div></div>`;
+  }).join('')||'<div class="empty">Sem pedidos.</div>';
+  document.getElementById('pedCount').textContent=P.length+' pedidos';
+  document.getElementById('pedBody').innerHTML=P.length?P.map(p=>{
+    const md=mediaModelo(p.modelo);
+    const ref=p.hPlan||md.horas;
+    const d=ref&&p.concluido?Math.round((p.hReal/ref-1)*100):null;
+    return `<tr>
+      <td class="c-of">${p.projeto}<div style="font-size:9.5px;color:var(--muted);font-weight:400">PV ${p.pv||'—'}</div></td>
+      <td style="color:var(--txt-2);font-weight:700">${(p.cliente||'—').slice(0,20)}</td>
+      <td><span class="pill p-nt">${p.modelo}</span></td>
+      <td><span class="pill ${p.concluido?'p-ok':'p-wa'}"><span class="dot" style="background:currentColor"></span>${p.etapa}</span></td>
+      <td class="c-mut">${p.ofsEnc}/${p.ofsViv}${p.canc?`<div style="font-size:9px;color:#E8697A">${p.canc} canc.</div>`:''}</td>
+      <td style="font-weight:700;color:var(--wine-bright)">${h1(p.hReal)}h</td>
+      <td style="color:${p.hPlan?'var(--navy)':'var(--muted)'}">${p.hPlan?h1(p.hPlan)+'h':'—'}</td>
+      <td style="color:${md.n?'var(--rose)':'var(--muted)'}">${md.n?h1(md.horas)+'h':'—'}</td>
+      <td>${d===null?'<span style="color:var(--muted)">—</span>':`<span class="dv ${d>0?'neg':'pos'}">${d>0?'+':''}${d}%</span>`}</td>
+      <td class="c-mut">${fmtD(p.ini)}</td>
+      <td class="c-mut">${p.lead!=null?p.lead+'d':'—'}</td></tr>`;
+  }).join(''):'<tr><td colspan="11" class="empty">Nenhum pedido.</td></tr>';
+}
+
+/* ══ APONTAMENTOS ══ */
+function renderApont(){
+  const A=filtroAp();
+  const h=A.reduce((a,b)=>a+b.horas,0);
+  const dias=new Set(A.map(a=>a.data&&a.data.getTime()).filter(Boolean));
+  const orf=A.filter(a=>a.orfa).length;
+  const ev={};A.forEach(a=>{const k=a.of+'|'+(a.data?a.data.getTime():'')+'|'+a.ini;
+    ev[k]=Math.max(ev[k]||0,a.horas);});
+  const decor=Object.values(ev).reduce((a,b)=>a+b,0);
+  kpi('kAp',[
+    {l:'Horas-Homem',v:h1(h),d:'soma de todos os apontamentos',c:'var(--wine-bright)'},
+    {l:'Tempo Decorrido',v:h1(decor),d:'descontando trabalho simultâneo',c:'var(--navy)'},
+    {l:'Lançamentos',v:A.length,d:`em <b>${dias.size}</b> dia(s)`,c:'var(--teal)'},
+    {l:'OFs Apontadas',v:new Set(A.map(a=>a.of)).size,d:'com ao menos 1 lançamento',c:'var(--ok)'},
+    {l:'Sem OF na Base',v:orf,d:orf?'falta relatório de estrutura':'todas vinculadas',c:orf?'var(--warn)':'var(--ok)'}
+  ]);
+  const pd={};A.forEach(a=>{if(a.data)pd[fmtD(a.data)]=(pd[fmtD(a.data)]||0)+a.horas;});
+  const ds=Object.keys(pd).sort((a,b)=>{const[d1,m1]=a.split('/'),[d2,m2]=b.split('/');return(m1-m2)||(d1-d2);});
+  ci('chDia').setOption({grid:{left:8,right:14,top:22,bottom:4,containLabel:true},
+    tooltip:{trigger:'axis',...TT,valueFormatter:v=>h2(v)+'h'},
+    xAxis:{type:'category',data:ds,...AX,axisLabel:{...AX.axisLabel,rotate:30,fontSize:9}},
+    yAxis:{type:'value',...AX,name:'h',nameTextStyle:{color:'#7A7A7A',fontSize:10}},
+    series:[{type:'bar',data:ds.map(d=>+pd[d].toFixed(2)),barWidth:'56%',
+      itemStyle:{color:'#B32C42',borderRadius:[3,3,0,0]},
+      label:{show:true,position:'top',color:'#B8B8B8',fontSize:9,formatter:p=>p.value.toFixed(0)}}]});
+  const cc={};A.forEach(a=>cc[a.cc||'—']=(cc[a.cc||'—']||0)+a.horas);
+  const cl=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+  ci('chCC').setOption({grid:{left:8,right:46,top:22,bottom:4,containLabel:true},
+    tooltip:{trigger:'axis',...TT,valueFormatter:v=>h2(v)+'h'},
+    xAxis:{type:'value',...AX,name:'h',nameTextStyle:{color:'#7A7A7A',fontSize:10}},
+    yAxis:{type:'category',data:cl.map(c=>c[0]),...AX,inverse:true,axisLabel:{...AX.axisLabel,fontSize:9}},
+    series:[{type:'bar',data:cl.map(c=>+c[1].toFixed(2)),barWidth:'56%',
+      itemStyle:{color:'#7C162A',borderRadius:[0,3,3,0]},
+      label:{show:true,position:'right',color:'#B8B8B8',fontSize:9.5,formatter:p=>h1(p.value)+'h'}}]});
+  const lst=[...A].sort((a,b)=>b.horas-a.horas).slice(0,400);
+  document.getElementById('apCount').textContent=A.length+' lançamentos'+(A.length>400?' (400 maiores)':'');
+  document.getElementById('apBody').innerHTML=lst.length?lst.map(a=>`<tr>
+    <td class="c-of">${a.of}${a.orfa?' <span class="pill p-wa" style="font-size:8px">órfã</span>':''}</td>
+    <td class="c-mut">${(a.pecaDesc||'—').slice(0,24)}</td>
+    <td class="c-mut">${a.cc}</td><td>${a.ativ}</td>
+    <td><span class="pill ${ehSetor(a.setor)?'p-tl':'p-wa'}">${a.setor}</span></td>
+    <td class="c-mut">${fmtD(a.data)}</td><td class="c-mut">${a.ini}</td><td class="c-mut">${a.fim}</td>
+    <td style="font-weight:700;color:var(--wine-bright)">${h2(a.horas)}h</td></tr>`).join('')
+    :'<tr><td colspan="9" class="empty">Sem apontamentos.</td></tr>';
+}
+
+/* ══ OFs ══ */
+function renderOfs(){
+  const L=filtroOFs();
+  const apOf={};APONT.forEach(a=>{(apOf[a.of]=apOf[a.of]||{h:0,s:new Set()});
+    apOf[a.of].h+=a.horas;apOf[a.of].s.add(a.setor);});
+  const enc=L.filter(o=>o.sit==='Encerrado'),canc=L.filter(o=>o.sit==='Cancelado');
+  kpi('kOfs',[
+    {l:'OFs',v:L.length,d:'com filtros atuais',c:'var(--wine-bright)'},
+    {l:'Encerradas',v:enc.length,d:`<b>${h1(enc.reduce((a,b)=>a+(apOf[b.of]?.h||0),0))}h</b>`,c:'var(--ok)'},
+    {l:'Canceladas',v:canc.length,d:`<b>${L.length?Math.round(canc.length/L.length*100):0}%</b> do emitido`,c:'var(--late)'},
+    {l:'Com Apontamento',v:L.filter(o=>apOf[o.of]).length,d:'ao menos 1 lançamento',c:'var(--teal)'},
+    {l:'Produção Externa',v:L.filter(o=>o.tipo==='E').length,d:'terceirizadas',c:'var(--warn)'}
+  ]);
+  const NC={'Produto pai':'p-la','Subconjunto':'p-wa','Peça':'p-tl'};
+  const lst=[...L].sort((a,b)=>(apOf[b.of]?.h||0)-(apOf[a.of]?.h||0));
+  document.getElementById('ofsCount').textContent=lst.length+' ordens';
+  document.getElementById('ofsBody').innerHTML=lst.length?lst.map(o=>{
+    const a=apOf[o.of];
+    return `<tr>
+      <td class="c-of">${o.of}</td>
+      <td><span class="pill ${NC[o.nivel]}">${o.nivel}</span></td>
+      <td><span class="pill p-nt">${o.modelo}</span></td>
+      <td class="c-mut">${o.conjunto}</td><td>${o.desc}</td>
+      <td class="c-mut">${fmtD(o.dOF)}</td><td class="c-mut">${fmtD(o.dFim)}</td>
+      <td class="c-mut">${a?[...a.s].join(', '):'—'}</td>
+      <td style="font-weight:700;color:${a?'var(--wine-bright)':'var(--muted)'}">${a?h2(a.h)+'h':'—'}</td>
+      <td><span class="pill ${o.sit==='Encerrado'?'p-ok':(o.sit==='Cancelado'?'p-la':'p-wa')}">${o.sit}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="10" class="empty">Nenhuma OF.</td></tr>';
+}
+
+/* ══ QUALIDADE ══ */
+function renderQual(){
+  const L=filtroOFs();
+  const apOf={};APONT.forEach(a=>apOf[a.of]=(apOf[a.of]||0)+a.horas);
+  const enc=L.filter(o=>o.sit==='Encerrado');
+  const semT=enc.filter(o=>!apOf[o.of]);
+  const canc=L.filter(o=>o.sit==='Cancelado');
+  const orf=filtroAp().filter(a=>a.orfa);
+  kpi('kQual',[
+    {l:'Encerradas s/ Apontamento',v:semT.length,d:`<b>${enc.length?Math.round(semT.length/enc.length*100):0}%</b> das encerradas`,c:'var(--warn)'},
+    {l:'Canceladas',v:canc.length,d:`<b>${L.length?Math.round(canc.length/L.length*100):0}%</b> do emitido`,c:'var(--late)'},
+    {l:'Cobertura',v:(enc.length?Math.round((enc.length-semT.length)/enc.length*100):0)+'<span class="kpi-u">%</span>',d:'encerradas com horas',c:'var(--ok)'},
+    {l:'Apontamentos Órfãos',v:orf.length,d:'sem OF na base',c:orf.length?'var(--warn)':'var(--ok)'}
+  ]);
+  document.getElementById('qtdSemT').textContent=semT.length+' OFs';
+  document.getElementById('qualBody').innerHTML=semT.length?semT.map(o=>`<tr>
+    <td class="c-of">${o.of}</td><td class="c-mut">${o.conjunto}</td><td>${o.desc}</td><td>${o.qtdP}</td></tr>`).join('')
+    :'<tr><td colspan="4" class="empty">Todas com apontamento ✓</td></tr>';
+  document.getElementById('qtdCanc').textContent=canc.length+' OFs';
+  document.getElementById('cancBody').innerHTML=canc.length?canc.map(o=>`<tr>
+    <td class="c-of">${o.of}</td><td class="c-mut">${o.conjunto}</td><td>${o.desc}</td><td>${o.qtdP}</td></tr>`).join('')
+    :'<tr><td colspan="4" class="empty">Nenhuma cancelada ✓</td></tr>';
+  document.getElementById('orfBody').innerHTML=orf.length?orf.slice(0,120).map(a=>`<tr>
+    <td class="c-of">${a.of}</td><td>${a.cc}</td><td class="c-mut">${a.ativ}</td>
+    <td class="c-mut">${fmtD(a.data)}</td><td style="font-weight:700">${h2(a.horas)}h</td></tr>`).join('')
+    :'<tr><td colspan="5" class="empty">Todos vinculados ✓</td></tr>';
+}
+
+let C={};
+const PAL=['#7C162A','#B32C42','#C65366','#D4B0B6','#435D74','#2E7D6B','#3FA372','#D67610','#8C6A70','#5A7A8C'];
+const AX={axisLine:{lineStyle:{color:'rgba(255,255,255,.1)'}},axisLabel:{color:'#7A7A7A',fontFamily:'Lato',fontSize:10},splitLine:{lineStyle:{color:'rgba(255,255,255,.04)'}}};
+const TT={backgroundColor:'#262626',borderColor:'rgba(255,255,255,.1)',textStyle:{color:'#F2F2F2',fontSize:11}};
+function ci(id){if(!C[id])C[id]=echarts.init(document.getElementById(id));return C[id];}
+
+/* ══ PAINEL SETORES ══ */
+function naoMapeados(){
+  const m={};
+  APONT.forEach(a=>{if(ehSetor(a.setor))return;
+    const k=a.ativ||'—';m[k]=m[k]||{n:0,h:0,cc:new Set()};
+    m[k].n++;m[k].h+=a.horas;m[k].cc.add(a.cc);});
+  return Object.entries(m).sort((a,b)=>b[1].h-a[1].h);
+}
+function abreSetores(){
+  const nm=naoMapeados();
+  const uso={};APONT.forEach(a=>{if(ehSetor(a.setor)){
+    uso[a.setor]=uso[a.setor]||{n:0,h:0};uso[a.setor].n++;uso[a.setor].h+=a.horas;}});
+  const opts=s=>SETORES.map(p=>`<option value="${p}" ${s===p?'selected':''}>${p}</option>`).join('');
+  document.getElementById('modalBody').innerHTML=`
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:15px;line-height:1.6">
+      O setor vem da <b style="color:var(--txt-2)">atividade</b> do apontamento, que é mais precisa que o
+      centro de custo — ACABAMENTO e PINTURA saem juntos no centro PINTURA, por exemplo.
+    </div>
+    ${nm.length?`<div style="font-family:'Red Hat Display';font-weight:700;font-size:13px;margin-bottom:8px;color:var(--warn)">
+      ⚠ ${nm.length} atividade(s) sem setor definido</div>
+    <table style="width:100%;margin-bottom:20px"><thead><tr>
+      <th>Atividade</th><th>Lanç.</th><th>Horas</th><th>Centro de custo</th><th>Mapear para</th></tr></thead><tbody>
+    ${nm.map(([k,v])=>`<tr><td style="font-weight:700">${k}</td><td>${v.n}</td>
+      <td class="c-mut">${h2(v.h)}h</td><td class="c-mut">${[...v.cc].join(', ')}</td>
+      <td><select class="sel-map" onchange="setMapaSetor('${k.replace(/'/g,"\\'")}',this.value)">
+        <option value="">— manter separado —</option>${opts(MAPA_SET[k])}</select></td></tr>`).join('')}
+    </tbody></table>`:`<div style="color:var(--ok);font-size:12.5px;font-weight:700;margin-bottom:18px">
+      ✓ Todas as atividades estão mapeadas</div>`}
+    <div style="font-family:'Red Hat Display';font-weight:700;font-size:13px;margin-bottom:8px">
+      Setores padrão <span style="font-weight:400;font-size:11px;color:var(--muted)">— a ordem define o fluxo</span></div>
+    <table style="width:100%"><thead><tr><th>#</th><th>Setor</th><th>Lanç.</th><th>Horas</th><th></th></tr></thead><tbody>
+    ${SETORES.map((p,i)=>{const u=uso[p]||{n:0,h:0};
+      return `<tr><td class="c-mut">${i+1}</td><td style="font-weight:700">${p}</td>
+      <td>${u.n||'—'}</td><td class="c-mut">${u.h?h2(u.h)+'h':'—'}</td>
+      <td><button class="btn btn-2" style="height:22px;padding:0 8px;font-size:10px" onclick="removeSetor('${p}')">remover</button></td></tr>`;
+    }).join('')}</tbody></table>
+    <div style="display:flex;gap:8px;margin-top:13px">
+      <input type="text" id="novoSet" placeholder="Novo setor" style="flex:1;height:31px"
+        onkeydown="if(event.key==='Enter')addSetor()">
+      <button class="btn" onclick="addSetor()">+ Adicionar</button></div>`;
+  document.getElementById('modalTit').textContent='Setores';
+  document.getElementById('modal').classList.add('on');
+}
+function setMapaSetor(a,alvo){
+  if(alvo)MAPA_SET[a]=alvo;else delete MAPA_SET[a];
+  salvaCfg();reconstruir();abreSetores();
+}
+function addSetor(){
+  const i=document.getElementById('novoSet'),v=i.value.trim();
+  if(!v)return;if(!SETORES.includes(v))SETORES.push(v);
+  salvaCfg();i.value='';reconstruir();abreSetores();
+}
+function removeSetor(s){
+  if(!confirm(`Remover "${s}"?`))return;
+  SETORES=SETORES.filter(x=>x!==s);
+  Object.keys(MAPA_SET).forEach(k=>{if(MAPA_SET[k]===s)delete MAPA_SET[k];});
+  salvaCfg();reconstruir();abreSetores();
+}
+
+/* ══ BASE ══ */
+function abreBase(){
+  const pr={};OFS.forEach(o=>{const k=o.projeto||'—';
+    pr[k]=pr[k]||{n:0,cli:o.cliente,mod:o.modelo,pv:o.pv,h:0};pr[k].n++;});
+  APONT.forEach(a=>{if(a.projeto&&pr[a.projeto])pr[a.projeto].h+=a.horas;});
+  const ls=Object.entries(pr).sort((a,b)=>b[1].n-a[1].n);
+  document.getElementById('modalBody').innerHTML=`
+    <div style="display:flex;gap:9px;margin-bottom:13px;flex-wrap:wrap">
+      <button class="btn" onclick="document.getElementById('file').click()">⬆ Adicionar relatório</button>
+      <button class="btn btn-2" onclick="exportaBase()">⬇ Exportar base</button>
+      <button class="btn btn-2" onclick="document.getElementById('fileBase').click()">⬆ Importar base</button>
+      <button class="btn btn-2" style="border-color:rgba(198,43,63,.4);color:#E8697A" onclick="limpaBase()">✕ Limpar</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+      São dois relatórios do Evolutize: <b style="color:var(--txt-2)">Estrutura de Produto</b> (as OFs do projeto)
+      e <b style="color:var(--txt-2)">Horas Apontadas</b> (o tempo de cada setor). O tipo é detectado sozinho e
+      linhas repetidas são ignoradas.<br><br>
+      Na base: <b style="color:var(--txt-2)">${RAW_EST.length}</b> OFs ·
+      <b style="color:var(--txt-2)">${RAW_AP.length}</b> apontamentos.
+    </div>
+    <table style="width:100%"><thead><tr><th>Projeto</th><th>Cliente</th><th>Modelo</th>
+      <th>PV</th><th>OFs</th><th>Horas</th><th></th></tr></thead><tbody>
+    ${ls.length?ls.map(([k,v])=>`<tr><td class="c-of">${k}</td>
+      <td style="color:var(--txt-2)">${(v.cli||'—').slice(0,24)}</td>
+      <td><span class="pill p-nt">${v.mod}</span></td><td class="c-mut">${v.pv||'—'}</td>
+      <td style="font-weight:700">${v.n}</td>
+      <td style="color:${v.h?'var(--wine-bright)':'var(--muted)'}">${v.h?h1(v.h)+'h':'—'}</td>
+      <td><button class="btn btn-2" style="height:22px;padding:0 8px;font-size:10px"
+        onclick="removeProjeto('${k.replace(/'/g,"\\'")}')">remover</button></td></tr>`).join('')
+      :'<tr><td colspan="7" class="empty">Base vazia.</td></tr>'}</tbody></table>`;
+  document.getElementById('modalTit').textContent='Base de dados';
+  document.getElementById('modal').classList.add('on');
+}
+function fechaModal(){document.getElementById('modal').classList.remove('on');}
+function removeProjeto(p){
+  if(!confirm(`Remover o projeto ${p}?`))return;
+  const ofsP=new Set(OFS.filter(o=>o.projeto===p).map(o=>o.of));
+  RAW_EST=RAW_EST.filter(r=>String(r[C_EST.proj]||'').trim()!==p);
+  RAW_AP=RAW_AP.filter(r=>!ofsP.has(String(r[C_AP.of]||'').trim()));
+  salvaBase();reconstruir();atualizaFonte();abreBase();
+}
+function limpaBase(){
+  if(!confirm('Apagar tudo e voltar ao exemplo?'))return;
+  seed();salvaBase();reconstruir();atualizaFonte();fechaModal();
+}
+function exportaBase(){
+  const b=new Blob([JSON.stringify({est:RAW_EST,ap:RAW_AP,origens:ORIGENS,
+    plano:PLANO,setores:SETORES,mapa:MAPA_SET},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='rohden_base.json';a.click();
+}
+function importaBase(f){
+  if(!f)return;const rd=new FileReader();
+  rd.onload=e=>{try{const j=JSON.parse(e.target.result);
+    if(j.est){RAW_EST=j.est;RAW_AP=j.ap||[];ORIGENS=j.origens||[];
+      if(j.plano)PLANO=j.plano;if(j.setores)SETORES=j.setores;if(j.mapa)MAPA_SET=j.mapa;
+      salvaBase();salvaCfg();reconstruir();atualizaFonte();abreBase();toast('Base importada');}
+  }catch(err){alert('Arquivo inválido');}};
+  rd.readAsText(f);
+}
+
+/* ══ NAV ══ */
+let view='setores';
+function render(){
+  if(view==='setores')renderSetores();
+  if(view==='pedidos')renderPedidos();
+  if(view==='apont')renderApont();
+  if(view==='ofs')renderOfs();
+  if(view==='quali')renderQual();
+  document.getElementById('cPed').textContent=pedidos().length;
+  document.getElementById('cAp').textContent=APONT.length;
+  document.getElementById('cOfs').textContent=filtroOFs().length;
+  const L=filtroOFs(),apOf={};APONT.forEach(a=>apOf[a.of]=1);
+  document.getElementById('cQual').textContent=
+    L.filter(o=>(o.sit==='Encerrado'&&!apOf[o.of])||o.sit==='Cancelado').length;
+  const nm=naoMapeados(),cm=document.getElementById('cMap');
+  cm.textContent=nm.length||'✓';
+  cm.style.background=nm.length?'rgba(214,118,16,.25)':'rgba(63,163,114,.2)';
+  cm.style.color=nm.length?'var(--warn)':'var(--ok)';
+  navMod();
+  setTimeout(()=>Object.values(C).forEach(c=>c&&c.resize()),50);
+}
+function navMod(){
+  const sel=document.getElementById('fMod').value;
+  const ms={};OFS.forEach(o=>{ms[o.modelo]=ms[o.modelo]||new Set();ms[o.modelo].add(o.projeto);});
+  document.getElementById('navMod').innerHTML=Object.entries(ms).sort((a,b)=>b[1].size-a[1].size)
+    .map(([m,p])=>`<button class="nav-btn ${sel===m?'on':''}" onclick="selMod('${m}')">
+      <span class="nav-ico">◆</span>${m}<span class="nav-count">${p.size}</span></button>`).join('')
+    ||'<div style="font-size:10.5px;color:var(--muted);padding:6px">—</div>';
+}
+function selMod(m){
+  const s=document.getElementById('fMod');
+  s.value=(s.value===m)?'ALL':m;popularProj();render();
+}
+function setView(v,el){
+  view=v;
+  document.querySelectorAll('.nav-btn[data-v]').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  ['vSetores','vPedidos','vApont','vOfs','vQuali'].forEach(i=>document.getElementById(i).classList.add('hidden'));
+  const T={setores:['vSetores','Horas por Setor','Realizado × planejado × média por modelo de equipamento'],
+    pedidos:['vPedidos','Pedidos','Em que setor está cada pedido, conforme apontamento'],
+    apont:['vApont','Apontamentos','Lançamentos de horas por setor, atividade e dia'],
+    ofs:['vOfs','Ordens de Fabricação','Lista completa com horas apontadas'],
+    quali:['vQuali','Qualidade do Dado','Apontamentos faltantes, cancelamentos e órfãos']};
+  document.getElementById(T[v][0]).classList.remove('hidden');
+  document.getElementById('pgT').textContent=T[v][1];
+  document.getElementById('pgS').textContent=T[v][2];
+  render();
+}
+function toggleSb(){document.getElementById('sb').classList.toggle('collapsed');
+  setTimeout(()=>Object.values(C).forEach(c=>c&&c.resize()),300);}
+function popular(){
+  const sm=document.getElementById('fMod'),am=sm.value;
+  const ms=[...new Set(OFS.map(o=>o.modelo))].sort();
+  sm.innerHTML='<option value="ALL">Todos</option>'+ms.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if(ms.includes(am))sm.value=am;
+  popularProj();
+}
+function popularProj(){
+  const m=document.getElementById('fMod').value;
+  const s=document.getElementById('fProj'),a=s.value;
+  const base=OFS.filter(o=>m==='ALL'||o.modelo===m);
+  const ps=[...new Set(base.map(o=>o.projeto).filter(Boolean))].sort();
+  s.innerHTML='<option value="ALL">Todos</option>'+ps.map(p=>{
+    const o=base.find(x=>x.projeto===p);
+    return `<option value="${p}">${p} · ${(o?.cliente||'').slice(0,20)}</option>`;}).join('');
+  s.value=ps.includes(a)?a:'ALL';
+}
+const dz=document.getElementById('drop');
+document.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('on');});
+dz.addEventListener('dragleave',e=>{if(e.target===dz)dz.classList.remove('on');});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('on');
+  if(e.dataTransfer.files.length)lerArquivos(e.dataTransfer.files);});
+window.addEventListener('resize',()=>Object.values(C).forEach(c=>c&&c.resize()));
+
+/* ══ BOOT ══ */
+const B_EST=[[177294,"MATERIAL ELETRICO 2RTA - IRIO DALMASO (PV-699)","2026086-R2-20","MATERIAL ELETRICO - IRIO DALMASO (SAPEZAL-MT) - 2RTA - ","25/04/2026","25/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179682,"QUEIMADOR 2RTA MAX - IRIO DAL' MASO (PV-699)","1512-004-000","CONJUNTO GERAL 2RTA MAX","13/05/2026","02/06/2026","Encerrado","Total/Total",1.0,1.0,189.2349,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179683,"CHAPA 2RTA - IRIO DALMASO (PV-699)","0601-027-194","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.1733,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179693,"KIT 2RTA - IRIO DALMASO (PV-699)","1500-000-001","KIT RTA - ITENS PARA CAMPO","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179694,"KIT 2RTA - IRIO DALMASO (PV-699)","0200-000-097","RODO LIMPEZA DA CUPULA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179695,"KIT 2RTA - IRIO DALMASO (PV-699)","0200-000-096","TUBO QUADRADO","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179696,"KIT 2RTA - IRIO DALMASO (PV-699)","1502-013-278","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.3339,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179697,"KIT 2RTA - IRIO DALMASO (PV-699)","0100-000-273","CHAPA PARA ADESIVO DE INSTRUCAO","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0758,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179698,"KIT 2RTA - IRIO DALMASO (PV-699)","1503-010-016","GANCHO P/ REMOCAO DAS GRELHAS - RTA/RTM","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179699,"KIT 2RTA - IRIO DALMASO (PV-699)","1503-010-018","BARRA RED. (INOX)","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179700,"KIT 2RTA - IRIO DALMASO (PV-699)","1503-010-019","BARRA RED. (INOX)","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179701,"KIT 2RTA - IRIO DALMASO (PV-699)","01387C","REBITE DE REPUXO 4.0 X 12 [X100]","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179703,"CJ DO MOTOVIBRADOR 2RTA - IRIO DALMASO (PV-699)","1502-013-012","CJ DO MOTOVIBRADOR - RTA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179704,"CJ DO MOTOVIBRADOR 2RTA - IRIO DALMASO (PV-699)","1502-013-104","SUPORTE DO MOTOVIBRADOR","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179705,"CJ DO MOTOVIBRADOR 2RTA - IRIO DALMASO (PV-699)","0203-001-282","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179706,"CJ DO MOTOVIBRADOR 2RTA - IRIO DALMASO (PV-699)","1502-013-105","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1525,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179707,"CJ DO MOTOVIBRADOR 2RTA - IRIO DALMASO (PV-699)","1502-013-263","TUBO RET.","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179708,"CHAPA 2RTA - IRIO DALMASO (PV-699)","1502-013-016","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2808,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179709,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-030","PROTECAO DO ACIONAMENTO PARA RTM E RTA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,2.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179710,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-077","CORPO SOLDADO DA PROTECAO P/ RTM E RTA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179711,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","0108-001-273","BARRA REDONDA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1056,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179712,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","0203-001-196","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0767,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179713,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1501-001-025","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3339,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179714,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-078","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.3692,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179715,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-079","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.1925,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179716,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-081","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.1925,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179717,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-082","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.2783,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179718,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-083","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.2783,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179719,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-084","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0908,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179720,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-085","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.275,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179721,"PROTECAO DO ACIONAMENTO 2RTA - IRIO DALMASO (PV-699)","1502-013-086","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.275,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179722,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-150","CJ SILO PARAFUSADO MODULAR - 2RTA - 5M3","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179723,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","0100-000-094","PLACA DE IDENTIFICACAO ROHDEN (1000 X 400)","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179724,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-142","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.3756,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179725,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-145","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.4422,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179726,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-147","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.3033,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179727,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-149","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.1992,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179728,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-152","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.5847,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179729,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-153","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.3756,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179730,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-154","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.4422,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179731,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-155","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.5847,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179732,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-156","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",4.0,4.0,0.4617,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179733,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-157","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1669,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179734,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-159","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1669,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179735,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-161","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.1992,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179736,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-162","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1803,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179737,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-164","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.1992,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179738,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-166","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.6456,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179739,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-167","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.5439,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179740,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-171","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",8.0,8.0,0.5689,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179741,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-253","CJ TRAVESSA PARA ICAMENTO","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179742,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-254","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.3914,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179743,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-255","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.2542,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179744,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-256","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179745,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-259","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.3792,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179746,"CJ SILO 2RTA - IRIO DALMASO (PV-699)","1502-013-261","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1511,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179747,"POS. SENSORES 2RTA - IRIO DALMASO (PV-699)","1502-013-285","POS. SENSORES RTA - ALIM. FRONTAL POR PA CARREGADEIRA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179748,"POS. SENSORES 2RTA - IRIO DALMASO (PV-699)","1502-013-251","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179749,"POS. SENSORES 2RTA - IRIO DALMASO (PV-699)","1502-013-262","POLICARBONATO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179750,"POS. SENSORES 2RTA - IRIO DALMASO (PV-699)","1502-013-282","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",8.0,8.0,0.5958,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179751,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1502-024-060","ABAS EXTENSAO DO SILO - 2RTA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179752,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-007","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.285,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179753,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-008","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.2092,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179754,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-011","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1669,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179755,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-012","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.3792,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179756,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-013","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.1958,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179757,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-014","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1669,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179758,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-015","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1669,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179759,"ABAS DO SILO 2RTA - IRIO DALMASO (PV-699)","1503-009-016","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1803,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179760,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-130","MODULO ALIM. DUPLA ROSCA C/ REGULAGEM NOS PES - RTA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179761,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-007","NYLON","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179762,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-007-1","NYLON - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179763,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-020","CONJUNTO DA ENGRENAGEM SUPERIOR PARA RTM","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.001,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179764,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-032","ENGRENAGEM P/ RTM","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179765,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-036","BARRA REDONDA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179766,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-036-1","BARRA REDONDA - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179767,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-037","BARRA REDONDA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179768,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-038","CONJUNTO DA BUCHA DA ENGRENAGEM SUPERIOR RTM","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179769,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-038-1","CONJUNTO DA BUCHA DA ENGRENAGEM SUPERIOR RTM - PRE-MONT","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179770,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-034","CHAPA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179771,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-113","EIXO","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179772,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-045","SUPORTE","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0015,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179773,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-035","BARRA REDONDA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179774,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-035-1","BARRA REDONDA - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179775,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-044","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.2542,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179776,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-027","SUPORTE DO ESTICADOR DE CORRENTE RTM","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.002,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179777,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-028","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179778,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-029","BARRA REDONDA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179779,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-029-1","BARRA REDONDA - 3 - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179780,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-039","ENGRENAGEM P/ RTM","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179781,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-057","ROSCA SUPERIOR DIREITA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179782,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-059","TUBO DA ROSCA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179783,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-066","ALETA 3/16'' DIAM. 180 PASSO 220","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.2867,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179784,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-295","BARRA CHATA 3/8'' X 2''","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179785,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-301","ALETA 1/4'' DIAM. 180 PASSO 220","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179786,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-303","ALETA 3/16'' DIAM. 140 PASSO 220","13/05/2026","14/05/2026","Encerrado","Total/Total",6.0,6.0,0.1525,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179787,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-306","PONTA DE EIXO DIAM. 40 - 02","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179788,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-061","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",12.0,12.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179789,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-062","EIXO","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179790,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-062-1","EIXO - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179791,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-307","PONTA DE EIXO DIAM. 40 - 01","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179792,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-061","CHAPA","13/05/2026","/  /","Cancelado","Pendente/Pendente",4.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179793,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-063","EIXO","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179794,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-063-1","EIXO - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179795,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-512","TUBO","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179796,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-289","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1775,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179797,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-056","ROSCA INFERIOR ESQUERDA - L=2708MM","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179798,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-065","ALETA 3/16'' DIAM. 180 PASSO 220 (DIR.)","13/05/2026","14/05/2026","Encerrado","Total/Total",18.0,18.0,0.33,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179799,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-072","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179800,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-302","ALETA 1/4'' DIAM. 180 PASSO 220 (DIR.)","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179801,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-308","PONTA DE EIXO - ROSCA INFERIOR","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179802,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-061","CHAPA","13/05/2026","/  /","Cancelado","Pendente/Pendente",4.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179803,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-071","EIXO","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179804,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-071-1","EIXO - SERRA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179805,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-007-017","TUBO","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179806,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-057","TUBO DA ROSCA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179807,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-072","EXTENSAO FLANGEADA DO DUTO - RTA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179808,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1501-001-034","CHAPA","13/05/2026","/  /","Cancelado","Pendente/Pendente",4.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179809,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-069","TUBO SCH","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179810,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-071","TUBO INOX SCH","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179811,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-074","TAMPA DE INSPECAO DO MODULO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179812,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-075","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2558,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179813,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-106","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179814,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-107","BARRA REDONDA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179815,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-088","FLANGE INF. DO MODULO COM BRACO DE TORCAO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179816,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-089","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179817,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-091","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179818,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-092","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179819,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-093","FLANGE SUP. DO MODULO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179820,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-094","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179821,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-095","PORTA DE INSPECAO DO MODULO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179822,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0100-000-260","CONJ. DOBRADICA GONZO","13/05/2026","/  /","Cancelado","Pendente/Pendente",4.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179823,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0200-000-012","BARRA QUADRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179824,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-096","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.5689,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179825,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-097","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179826,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-098","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0767,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179827,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-107","BARRA REDONDA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179828,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-233","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0767,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179829,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-002","CORPO DO MODULO DE ALIM.","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179830,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-041","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179831,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-043","BARRA REDONDA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179832,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","0203-001-047","CHAPA CALANDRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",6.0,6.0,0.3428,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179833,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1416-002-189","TUBO SCHEDULE","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179834,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1501-001-015","CHAPA CALANDRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",4.0,4.0,0.3861,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179835,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1501-001-034","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",8.0,8.0,0.1525,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179836,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-051","TUBO SCHEDULE","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179837,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-052","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,4.2656,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179838,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-058","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.1775,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179839,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-073","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179840,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-076","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1775,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179841,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-099","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0767,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179842,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-102","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.5114,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179843,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-108","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3339,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179844,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-109","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1525,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179845,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-111","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179846,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1502-013-112","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1775,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179847,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-003","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.5689,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179848,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-024","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179849,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-004","PES DO MODULO DE ALIMENTACAO COM REGULAGEM","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179850,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-005","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.7214,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179851,"MODULO ALIM. 2RTA - IRIO DALMASO (PV-699)","1505-010-006","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179852,"PLACA DE DADOS 2RTA - IRIO DALMASO (PV-699)","1512-004-001","PLACA DE DADOS DO QUEIMADOR - 2RTA MAX","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.8675,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179853,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1512-004-020","CONJUNTO DO GRELHADO - 2 RTA MAX","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179854,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","0200-000-161","GRELHA PLANA INTEIRA PARA RTM - 2024","13/05/2026","21/05/2026","Encerrado","Total/Total",8.0,8.0,0.0022,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179855,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","0200-000-163","CJ GRELHA COM FECHAMENTO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.001,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179856,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","0200-000-161","GRELHA PLANA INTEIRA PARA RTM - 2024","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179857,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","0200-000-164","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.2675,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179858,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1502-013-177","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",6.0,6.0,0.7097,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179859,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1502-013-178","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",8.0,8.0,0.7097,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179860,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1502-013-179","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3339,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179861,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1512-001-043","PE DE REGULAGEM DO GRELAHDO","13/05/2026","21/05/2026","Encerrado","Total/Total",6.0,6.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179862,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1502-013-235","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",6.0,6.0,0.3117,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179863,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1512-001-044","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",6.0,6.0,0.5689,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179864,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1512-004-021","SUPORTE PARA LATERAL DE ALVENARIA - RTA MAX","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179865,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1512-004-035","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179866,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-033","BARRA REDONDA","13/05/2026","14/05/2026","Encerrado","Total/Total",7.0,7.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179867,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-005","CAVALETE DO GRELHADO (DIR.)","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179868,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-006","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.4681,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179869,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-007","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3914,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179870,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-008","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.4097,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179871,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-026","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.5439,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179872,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-009","CAVALETE DO GRELHADO (ESQ.)","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179873,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-008","CHAPA DOBRADA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179874,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-011","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3914,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179875,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-012","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3914,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179876,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-027","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.4681,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179877,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-013","TRAVESSA DE TRAVAMENTO DA GRELHA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179878,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-014","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.7097,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179879,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-025","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",4.0,4.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179880,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-017","CHAPA DOBRADA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.7097,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179881,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-022","VERGALHAO C/ ASA","13/05/2026","14/05/2026","Encerrado","Total/Total",10.0,10.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179882,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-042","SUP. P/ PAREDE DE ALVENARIA - RTA MAX","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179883,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-037","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179884,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-038","BARRA RED.","13/05/2026","14/05/2026","Encerrado","Total/Total",6.0,6.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179885,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-043","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.5439,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179886,"CJ DO GRELHADO 2RTA - IRIO DALMASO (PV-699)","1513-001-044","TIJ. ENCAIXE COM FURACAO PASSANTE (TIJOLO REFRAT. ENCAI","13/05/2026","21/05/2026","Encerrado","Total/Total",64.0,64.0,0.0354,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179887,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1512-004-030","CONJUNTO DE VENTILACAO - 2RTA MAX","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179888,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-000","VENTILADOR - ROTOR DIAM. 400 - 330X280 - FF215 - EIXO D","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0006,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179889,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-001","CORPO DO VENTILADOR - ROTOR DIAM. 400 - 330X280 - FF215","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0002,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179890,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-002","CHAPA LAT. DO VENT.","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0767,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179891,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-003","LAT. SAQUE DO ROT. DIAM.400","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179892,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-004","CHAPA CARACOL DO VENTILADOR","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.2044,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179893,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-005","BARRA REDONDA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179894,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-006","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0767,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179895,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-008","CANTONEIRA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179896,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-009","CANTONEIRA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179897,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-011","FLANGE FF215 P/ VENTILADOR","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0005,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179898,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-011-1","FLANGE FF215 P/ VENTILADOR - PLASMA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179899,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-027","CANTONEIRA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179900,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-031","FLANGE P/ VENTILADOR - 330 X 280","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179901,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-028","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179902,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-029","CHAPA DOBRADA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179903,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-007","ROTOR PARA VENTILADOR DIAM. 400 / FURO DIAM. 47","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0002,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179904,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-021","LAT. DO ROT. DIAM. 400","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0758,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179905,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-024","LAT. FIXACAO DO ROT. DIAM. 400","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179906,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-025","GUIA ALETAS ROT. DIAM. 400","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1733,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179907,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0803-002-019","ALETA DO ROTOR DIAM. 450","13/05/2026","15/05/2026","Encerrado","Total/Total",30.0,30.0,1.3369,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179908,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-014","TAMPA DO VENTILADOR - ROTOR DIAM. 400","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0002,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179909,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-015","FLANGE TAMPA DO VENT. DIAM. 400","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0758,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179910,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-016","CHAPA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.2019,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179911,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-017","CHAPA EXPANDIDA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179912,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-026","FLANGE DO ROTOR DIAM.400/500 - EIXO DIAM.28","13/05/2026","/  /","Cancelado","Pendente/Pendente",1.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179913,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-022","CHAPA","13/05/2026","/  /","Cancelado","Pendente/Pendente",1.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179914,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-023","BARRA REDONDA","13/05/2026","/  /","Cancelado","Pendente/Pendente",1.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179915,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-007","DUTO DE INJECAO DE AR COM REGULAGEM","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179916,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0203-001-252","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.2542,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179917,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0203-001-253","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179918,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-002-034","BARRA REDONDA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179919,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-002-035","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1367,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179920,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-008","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.2717,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179921,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-009","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1569,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179922,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-014","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.3117,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179923,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-015","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.1342,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179924,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1512-003-018","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.4347,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179925,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1512-004-046","DUTO DE VENTILAÇÃO 2RTA MAX","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179926,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-031","FLANGE P/ VENTILADOR - 330 X 280","13/05/2026","/  /","Cancelado","Pendente/Pendente",1.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179927,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-028","CHAPA DOBRADA","13/05/2026","/  /","Cancelado","Pendente/Pendente",2.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179928,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","0802-001-029","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",4.0,4.0,0.3914,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179929,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-012","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179930,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1503-008-013","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179931,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1505-010-025","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.3339,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179932,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1512-002-051","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.1992,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179933,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1512-004-047","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",1.0,1.0,0.3033,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179934,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1512-004-048","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.1511,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179935,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1513-001-019","PES DO VENTILADOR","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179936,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1502-013-185","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.4097,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179937,"CJ DE VENTILACAO 2RTA - IRIO DALMASO (PV-699)","1513-001-021","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179938,"ALTERACAO DA FORNALHA 2RTA - IRIO DALMASO (PV-699)","1512-004-110","MATERIAL PARA ALTERACAO DA FORNALHA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179939,"FECHAMENTO DA FORNALHA 2RTA - IRIO DALMASO (PV-699)","1512-004-090","FECHAMENTO DA FORNALHA EXISTENTE","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179940,"FECHAMENTO DA FORNALHA 2RTA - IRIO DALMASO (PV-699)","1512-004-002","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.11,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179941,"FECHAMENTO DA FORNALHA 2RTA - IRIO DALMASO (PV-699)","1512-004-003","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",3.0,3.0,0.11,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179942,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-029","JANELA COM BRACO DE REGULAGEM DE ABERTURA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179943,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","0500-000-095","QUADRO DA JANELA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179944,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","0500-000-096","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",4.0,4.0,0.455,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179945,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","0500-000-097","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",4.0,4.0,0.5408,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179946,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-013","JANELA DE VENTILACAO","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179947,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","0100-000-260","CONJ. DOBRADICA GONZO","13/05/2026","/  /","Cancelado","Pendente/Pendente",4.0,0.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","E"],[179948,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","0500-000-032","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",4.0,4.0,0.345,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179949,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-014","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.18,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179950,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-026","JANELA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179951,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-025","CHAPA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1775,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179952,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-027","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.0758,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179953,"JANELA COM BRACO 2RTA - IRIO DALMASO (PV-699)","1504-017-024","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.2333,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179954,"BATENTE DE PROTECAO 2RTA - IRIO DALMASO (PV-699)","1502-004-013","BATENTE DE PROTECAO - 2000MM","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179955,"BATENTE DE PROTECAO 2RTA - IRIO DALMASO (PV-699)","1502-001-032","VIGA \"U\"","13/05/2026","14/05/2026","Encerrado","Total/Total",1.0,1.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179956,"BATENTE DE PROTECAO 2RTA - IRIO DALMASO (PV-699)","1502-004-014","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179957,"BATENTE DE PROTECAO 2RTA - IRIO DALMASO (PV-699)","1502-004-015","TUBO REDONDO","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179958,"BATENTE DE PROTECAO 2RTA - IRIO DALMASO (PV-699)","1502-004-016","CANTONEIRA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.0889,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179959,"BATENTE DE PROTECAO 2RTA - IRIO DALMASO (PV-699)","1502-004-017","CHAPA","13/05/2026","21/05/2026","Encerrado","Total/Total",2.0,2.0,0.2425,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179960,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-000","BASE PARA PAINEL 600L X 250P","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179961,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-001","CORPO SOLDADO BASE PAINEL 600L X 250P","13/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,0.0,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179962,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-002","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.2658,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179963,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-003","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1803,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179964,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-004","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.1569,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179965,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-005","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.3792,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179966,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-006","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.3733,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179967,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-007","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.3169,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179968,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-008","CHAPA DOBRADA","13/05/2026","14/05/2026","Encerrado","Total/Total",2.0,2.0,0.5689,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[179969,"BASE PARA PAINEL 2RTA - IRIO DALMASO (PV-699)","0603-012-009","CHAPA DOBRADA","13/05/2026","15/05/2026","Encerrado","Total/Total",2.0,2.0,0.1925,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"],[182004,"QUEIMADOR 2RTA - IRIO DALMASO (PV-699)","2026086-R2","QUEIMADOR DE BIOMASSA 2RTA","21/05/2026","21/05/2026","Encerrado","Total/Total",1.0,1.0,9.5,"2026086.0","IRIO DALMASO (SAPEZAL-MT) - 2RTA (PROP 2026086R2)","IRIO DAL MASO","699.0","I"]];
+const B_AP=[["177294","ELÉTRICA","MONTAGEM ELETRICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179682","ADMINISTRAÇÃO DA PRODUÇÃO","CARREGAMENTO","20/05/2026",1.2502,2,"00:00:00","14:30:00"],["179682","ELÉTRICA","MONTAGEM ELETRICA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","MONTAGEM","EMBALAGEM","19/05/2026",18.9231,2,"07:17:06","18:00:00"],["179682","MONTAGEM","EMBALAGEM","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","MONTAGEM","MONTAGEM MECANICA","18/05/2026",2.785,1,"15:12:54","18:00:00"],["179682","MONTAGEM","MONTAGEM MECANICA","19/05/2026",9.3783,1,"07:22:18","18:00:00"],["179682","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","PINTURA","ACABAMENTO","18/05/2026",27.9908,3,"07:24:36","18:00:00"],["179682","PINTURA","ACABAMENTO","19/05/2026",28.2172,3,"07:15:00","18:00:00"],["179682","PINTURA","ACABAMENTO","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","PINTURA","PINTURA","18/05/2026",7.7592,2,"07:24:00","15:30:00"],["179682","PINTURA","PINTURA","19/05/2026",18.6614,2,"07:24:15","18:00:00"],["179682","PINTURA","PINTURA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","SOLDA","PRÉ-MONTAGEM","14/05/2026",6.9992,3,"13:31:16","18:00:00"],["179682","SOLDA","PRÉ-MONTAGEM","15/05/2026",22.0667,6,"07:14:55","12:15:00"],["179682","SOLDA","PRÉ-MONTAGEM","18/05/2026",15.4117,6,"07:15:00","17:18:11"],["179682","SOLDA","PRÉ-MONTAGEM","19/05/2026",1.8561,1,"13:23:27","15:14:49"],["179682","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","SOLDA","SOLDA","14/05/2026",8.1494,3,"14:44:28","18:00:00"],["179682","SOLDA","SOLDA","15/05/2026",4.9772,2,"07:17:20","12:15:02"],["179682","SOLDA","SOLDA","18/05/2026",14.8078,3,"07:25:23","18:00:00"],["179682","SOLDA","SOLDA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179682","USINAGEM","FURAR","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179683","PLASMA/LASER","LASER","15/05/2026",0.1733,3,"08:17:00","08:20:28"],["179693","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179693","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179693","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179693","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179693","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179694","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179694","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179694","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179694","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179694","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179695","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:01:04","13:08:05"],["179696","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:33:21","14:27:44"],["179696","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:17:14","08:18:46"],["179697","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:56:36","16:58:07"],["179701","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179703","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179703","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179703","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179703","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179703","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179704","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179704","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179704","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179704","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179704","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179705","PLASMA/LASER","LASER","14/05/2026",0.18,3,"15:18:01","15:21:37"],["179706","PLASMA/LASER","LASER","14/05/2026",0.1525,3,"11:51:30","13:08:23"],["179707","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:02:56","13:08:32"],["179708","PINTURA","PINTURA","20/05/2026",0.0167,1,"07:15:00","07:16:00"],["179708","PLASMA/LASER","LASER","15/05/2026",0.2642,3,"07:54:27","08:23:57"],["179709","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179709","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179709","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179709","PLASMA/LASER","LASER","20/05/2026",2.0,1,"00:00:00","00:00:00"],["179709","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179709","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179710","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179710","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179710","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179710","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179710","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179711","MONTAGEM","SERVICOS MANUAIS","20/05/2026",0.0167,1,"07:15:00","07:16:00"],["179711","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:04:48","13:08:59"],["179712","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:01:44","08:03:16"],["179713","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"09:36:21","13:03:14"],["179713","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"07:53:59","07:55:31"],["179714","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:45:25","09:27:19"],["179714","PLASMA/LASER","LASER","15/05/2026",0.2675,3,"07:45:17","08:31:18"],["179715","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:38:05","09:22:23"],["179715","PLASMA/LASER","LASER","15/05/2026",0.0908,3,"07:48:57","07:50:46"],["179716","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:52:45","09:32:15"],["179716","PLASMA/LASER","LASER","15/05/2026",0.0908,3,"07:56:17","07:58:06"],["179717","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:30:45","09:17:27"],["179717","PLASMA/LASER","LASER","15/05/2026",0.1767,3,"08:31:19","08:34:51"],["179718","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:49:05","09:29:47"],["179718","PLASMA/LASER","LASER","15/05/2026",0.1767,3,"08:38:25","08:41:57"],["179719","PLASMA/LASER","LASER","15/05/2026",0.0908,3,"07:47:07","07:48:56"],["179720","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:34:25","09:19:55"],["179720","PLASMA/LASER","LASER","15/05/2026",0.1733,3,"08:10:02","08:13:30"],["179721","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:56:25","09:34:43"],["179721","PLASMA/LASER","LASER","15/05/2026",0.1733,3,"08:23:58","08:27:26"],["179722","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179722","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179722","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179722","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179722","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179723","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179724","CORTE E DOBRA","DOBRA","14/05/2026",0.3056,2,"15:59:19","16:08:29"],["179724","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:12:44","16:14:08"],["179725","CORTE E DOBRA","DOBRA","14/05/2026",0.3056,2,"16:08:30","16:17:40"],["179725","PLASMA/LASER","LASER","14/05/2026",0.1367,3,"15:45:26","15:48:10"],["179726","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:46","07:18:42"],["179726","PLASMA/LASER","LASER","14/05/2026",0.18,3,"17:18:53","17:22:29"],["179727","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:52","07:41:00"],["179727","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:48:56","16:50:27"],["179728","CORTE E DOBRA","DOBRA","14/05/2026",0.3056,2,"16:17:41","16:26:51"],["179728","PLASMA/LASER","LASER","14/05/2026",0.2792,3,"15:36:46","15:42:21"],["179729","CORTE E DOBRA","DOBRA","14/05/2026",0.3056,2,"16:26:52","16:36:02"],["179729","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:04:14","16:05:38"],["179730","CORTE E DOBRA","DOBRA","14/05/2026",0.3056,2,"15:50:08","15:59:18"],["179730","PLASMA/LASER","LASER","14/05/2026",0.1367,3,"15:48:11","15:50:55"],["179731","CORTE E DOBRA","DOBRA","14/05/2026",0.3056,2,"15:40:57","15:50:07"],["179731","PLASMA/LASER","LASER","14/05/2026",0.2792,3,"15:25:34","15:31:09"],["179732","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:54","07:48:26"],["179732","PLASMA/LASER","LASER","14/05/2026",0.2658,3,"16:14:16","17:26:06"],["179732","PLASMA/LASER","LASER","15/05/2026",0.0725,3,"07:33:32","07:34:59"],["179733","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:40:11","17:45:03"],["179733","PLASMA/LASER","LASER","14/05/2026",0.0858,3,"16:24:40","16:26:23"],["179734","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:06:00","17:10:52"],["179734","PLASMA/LASER","LASER","14/05/2026",0.0858,3,"16:16:00","16:17:43"],["179735","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:55","07:52:09"],["179735","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:50:28","16:51:59"],["179736","CORTE E DOBRA","DOBRA","14/05/2026",0.1103,1,"16:39:06","16:45:43"],["179736","PLASMA/LASER","LASER","14/05/2026",0.07,3,"15:57:09","15:58:33"],["179737","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:49","07:29:51"],["179737","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:52:00","16:53:31"],["179738","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"09:40:51","13:06:29"],["179738","PLASMA/LASER","LASER","14/05/2026",0.3883,3,"08:03:17","10:37:25"],["179739","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"09:45:21","13:09:44"],["179739","PLASMA/LASER","LASER","14/05/2026",0.2867,3,"10:18:32","13:00:55"],["179740","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"09:49:51","13:12:59"],["179740","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:26:39","10:40:07"],["179741","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179741","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179741","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179741","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179741","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179742","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"09:54:21","13:16:14"],["179742","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"10:40:08","10:42:49"],["179743","PLASMA/LASER","LASER","14/05/2026",0.2542,3,"08:04:50","09:31:19"],["179744","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:34:51","13:45:29"],["179744","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:35:24","09:33:39"],["179745","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:56","07:55:52"],["179745","PLASMA/LASER","LASER","14/05/2026",0.2558,3,"16:58:08","17:29:43"],["179746","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:10:53","17:15:45"],["179746","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:05:39","16:07:03"],["179747","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179747","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179747","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179747","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179747","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179748","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"09:58:51","13:19:29"],["179748","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:36:39","09:35:59"],["179749","MONTAGEM","LIXADEIRA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179750","PLASMA/LASER","LASER","14/05/2026",0.5958,3,"15:31:10","17:08:01"],["179751","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179751","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179751","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179751","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179751","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179752","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:15:02","08:18:10"],["179752","PLASMA/LASER","LASER","14/05/2026",0.1617,3,"16:17:44","16:41:03"],["179753","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:47","07:22:25"],["179753","PLASMA/LASER","LASER","14/05/2026",0.0858,3,"16:19:28","16:21:11"],["179754","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:45:04","17:49:56"],["179754","PLASMA/LASER","LASER","14/05/2026",0.0858,3,"16:26:24","16:28:07"],["179755","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:48","07:26:08"],["179755","PLASMA/LASER","LASER","14/05/2026",0.2558,3,"16:42:48","17:33:20"],["179756","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:57","07:59:35"],["179756","PLASMA/LASER","LASER","15/05/2026",0.0725,3,"07:35:00","07:36:27"],["179757","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:15:46","17:20:38"],["179757","PLASMA/LASER","LASER","14/05/2026",0.0858,3,"16:21:12","16:22:55"],["179758","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:20:39","17:25:31"],["179758","PLASMA/LASER","LASER","14/05/2026",0.0858,3,"16:22:56","16:24:39"],["179759","CORTE E DOBRA","DOBRA","14/05/2026",0.1103,1,"16:45:44","16:52:21"],["179759","PLASMA/LASER","LASER","14/05/2026",0.07,3,"15:58:34","15:59:58"],["179760","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179760","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179760","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179760","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179760","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179763","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179763","PINTURA","ACABAMENTO","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179763","PINTURA","PINTURA","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179767","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:06:40","13:09:26"],["179772","PINTURA","ACABAMENTO","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179772","PINTURA","PINTURA","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179772","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179772","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179775","PLASMA/LASER","LASER","14/05/2026",0.2542,3,"07:55:32","09:19:39"],["179776","PINTURA","ACABAMENTO","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179776","PINTURA","PINTURA","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179776","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179776","SOLDA","SOLDA","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179777","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:44:51","13:49:42"],["179781","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179781","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179781","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179781","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179782","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:08:32","13:09:53"],["179783","PLASMA/LASER","LASER","14/05/2026",0.2867,3,"10:42:50","13:04:39"],["179784","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:38:24","13:17:05"],["179785","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:49:43","13:54:34"],["179786","PLASMA/LASER","LASER","14/05/2026",0.1525,3,"11:36:27","13:01:51"],["179787","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179787","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179787","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179787","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179787","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179788","PLASMA/LASER","LASER","14/05/2026",0.18,3,"14:59:56","15:03:32"],["179791","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179791","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179791","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179791","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179791","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179795","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:10:24","13:10:20"],["179796","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:37:54","09:38:19"],["179797","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179797","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179797","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179797","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179797","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179798","PLASMA/LASER","LASER","14/05/2026",0.33,3,"08:29:09","13:02:47"],["179799","PLASMA/LASER","LASER","14/05/2026",0.18,3,"15:03:33","15:07:09"],["179800","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:54:35","13:59:26"],["179801","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179801","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179801","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179801","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179801","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179805","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:12:16","13:10:47"],["179806","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:14:08","13:11:14"],["179807","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179807","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179807","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179807","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179807","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179809","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:55:12","13:21:08"],["179810","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:16:00","13:11:41"],["179811","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179811","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179811","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179811","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179811","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179812","PLASMA/LASER","LASER","14/05/2026",0.2558,3,"16:53:32","17:36:57"],["179813","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"10:21:14","10:23:55"],["179814","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:17:52","13:12:08"],["179815","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179815","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179815","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179815","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179815","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179816","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"10:45:32","10:48:13"],["179817","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:59:27","14:04:18"],["179818","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:04:19","14:09:10"],["179819","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179819","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179819","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179819","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179819","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179820","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"10:23:56","10:26:37"],["179821","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179821","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179821","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179821","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179821","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179823","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:19:44","13:12:35"],["179824","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:03:21","13:22:44"],["179824","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:39:09","10:50:55"],["179825","PLASMA/LASER","LASER","14/05/2026",0.18,3,"15:07:10","15:10:46"],["179826","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:06:23","08:07:55"],["179828","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:18:47","08:20:19"],["179829","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179829","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179829","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179829","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179829","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179830","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:25:23","13:30:14"],["179831","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:21:36","13:13:02"],["179832","MONTAGEM","CALANDRAR","15/05/2026",0.1319,1,"08:29:44","09:15:21"],["179832","PLASMA/LASER","LASER","14/05/2026",0.2108,3,"08:07:56","10:53:37"],["179833","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:23:28","13:13:29"],["179834","MONTAGEM","CALANDRAR","15/05/2026",0.1319,1,"08:37:19","09:15:43"],["179834","PLASMA/LASER","LASER","14/05/2026",0.2542,3,"07:57:05","09:42:59"],["179835","PLASMA/LASER","LASER","14/05/2026",0.1525,3,"11:45:03","13:05:35"],["179836","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:57:04","13:21:35"],["179837","CORTE E DOBRA","DOBRA","14/05/2026",4.1889,2,"07:15:00","09:35:40"],["179837","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:09:29","08:11:01"],["179838","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:41:39","09:45:19"],["179839","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:37:51","14:30:59"],["179839","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:55:24","10:10:59"],["179840","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:56:39","10:13:19"],["179841","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:11:02","08:12:34"],["179842","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:10:51","14:11:29"],["179842","PLASMA/LASER","LASER","14/05/2026",0.2542,3,"08:20:20","09:47:39"],["179843","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:07:51","13:25:59"],["179843","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"07:58:38","08:00:10"],["179844","PLASMA/LASER","LASER","14/05/2026",0.1525,3,"11:53:39","13:09:19"],["179845","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:42:21","14:34:14"],["179845","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:44:09","09:49:59"],["179846","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:45:24","09:52:19"],["179847","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:12:21","13:29:14"],["179847","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:46:39","10:29:19"],["179848","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:52:51","13:58:29"],["179848","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:47:54","09:56:59"],["179849","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179849","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179849","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179849","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179849","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179850","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:39:21","13:48:44"],["179850","PLASMA/LASER","LASER","14/05/2026",0.4642,3,"08:49:09","13:06:31"],["179851","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:30:15","13:35:06"],["179852","PLASMA/LASER","LASER","18/05/2026",0.8675,3,"07:15:55","07:33:16"],["179852","PLASMA/LASER","LASER","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179853","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179853","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179853","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179853","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179853","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179854","MONTAGEM","EMBALAGEM","20/05/2026",0.0022,1,"00:00:00","00:00:00"],["179855","MONTAGEM","EMBALAGEM","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179855","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179855","USINAGEM","FURAR","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179857","PLASMA/LASER","LASER","15/05/2026",0.2675,3,"07:50:47","08:38:24"],["179858","CORTE E DOBRA","DOBRA","14/05/2026",0.4672,2,"14:44:26","14:58:27"],["179858","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:09:11","14:14:02"],["179859","CORTE E DOBRA","DOBRA","14/05/2026",0.4672,2,"14:58:28","15:12:29"],["179859","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:14:03","14:18:54"],["179860","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:57:21","14:01:44"],["179860","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:00:11","08:01:43"],["179861","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179861","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179861","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179861","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179861","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179862","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:57:54","10:59:01"],["179863","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:01:51","14:04:59"],["179863","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:30:24","11:01:43"],["179864","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179864","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179864","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179864","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179864","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179865","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:28:44","11:31:25"],["179866","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:25:20","13:13:56"],["179867","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179867","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179867","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179867","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179867","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179868","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:46:51","14:37:29"],["179868","PLASMA/LASER","LASER","14/05/2026",0.2108,3,"08:21:53","11:04:25"],["179869","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:16:51","13:32:29"],["179869","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"10:29:20","10:32:01"],["179870","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:21:21","13:35:44"],["179870","PLASMA/LASER","LASER","14/05/2026",0.1525,3,"11:55:48","13:10:15"],["179871","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:06:21","14:08:14"],["179871","PLASMA/LASER","LASER","14/05/2026",0.2867,3,"11:04:26","13:11:11"],["179872","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179872","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179872","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179872","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179872","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179874","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:15:21","14:14:44"],["179874","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:07:08","11:09:49"],["179875","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:43:51","13:51:59"],["179875","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:09:50","11:12:31"],["179876","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:19:51","14:17:59"],["179876","PLASMA/LASER","LASER","14/05/2026",0.2108,3,"08:12:35","11:15:13"],["179877","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179877","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179877","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179877","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179877","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179878","CORTE E DOBRA","DOBRA","14/05/2026",0.4672,2,"15:12:30","15:26:31"],["179878","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:35:07","13:39:58"],["179879","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:23:47","14:28:38"],["179880","CORTE E DOBRA","DOBRA","14/05/2026",0.4672,2,"15:26:32","15:40:33"],["179880","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:28:39","14:33:30"],["179881","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:27:12","13:14:23"],["179882","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179882","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179882","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179882","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179882","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179883","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:15:14","11:17:55"],["179884","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:40:16","13:17:32"],["179885","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:51:21","14:40:44"],["179885","PLASMA/LASER","LASER","14/05/2026",0.2867,3,"10:32:02","13:03:43"],["179886","MONTAGEM","EMBALAGEM","20/05/2026",0.0177,1,"00:00:00","00:00:00"],["179886","USINAGEM","FURAR","20/05/2026",0.0177,1,"00:00:00","00:00:00"],["179887","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179887","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179887","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179887","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179887","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179888","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179888","PINTURA","ACABAMENTO","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179888","PINTURA","PINTURA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179889","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179889","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179889","PINTURA","PINTURA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179889","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179889","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179890","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:23:26","08:24:58"],["179891","PLASMA/LASER","LASER","14/05/2026",0.18,3,"17:08:02","17:11:38"],["179892","MONTAGEM","CALANDRAR","15/05/2026",0.1319,1,"08:44:54","09:16:05"],["179892","PLASMA/LASER","LASER","15/05/2026",0.0725,3,"07:30:36","07:32:03"],["179893","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:29:04","13:14:50"],["179894","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:14:08","08:15:40"],["179895","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:30:56","13:15:17"],["179896","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:32:48","13:15:44"],["179897","TERCEIRIZAÇÃO","TERCEIRIZAÇÃO","20/05/2026",0.0005,1,"00:00:00","00:00:00"],["179898","PLASMA/LASER","LASER","14/05/2026",0.18,3,"15:10:47","15:14:23"],["179899","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:42:08","13:17:59"],["179900","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179900","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179900","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179900","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179900","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179901","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:25:51","13:38:59"],["179901","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:31:39","09:26:39"],["179903","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179903","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179903","PINTURA","PINTURA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179903","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179903","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179904","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:44:20","16:45:51"],["179905","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:17:56","11:20:37"],["179906","PLASMA/LASER","LASER","15/05/2026",0.1733,3,"08:13:31","08:16:59"],["179907","CORTE E DOBRA","DOBRA","15/05/2026",0.7694,1,"09:16:45","10:02:55"],["179907","PLASMA/LASER","LASER","15/05/2026",0.5675,3,"07:58:23","08:09:44"],["179908","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179908","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179908","PINTURA","PINTURA","20/05/2026",0.0002,1,"00:00:00","00:00:00"],["179908","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179908","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179909","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:59:40","17:01:11"],["179910","MONTAGEM","CALANDRAR","15/05/2026",0.1319,1,"08:52:29","09:16:27"],["179910","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:07:04","16:08:28"],["179911","MONTAGEM","LIXADEIRA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179915","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179915","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179915","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179915","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179915","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179916","PLASMA/LASER","LASER","14/05/2026",0.2542,3,"08:24:59","10:01:39"],["179917","PLASMA/LASER","LASER","14/05/2026",0.18,3,"15:14:24","15:18:00"],["179918","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:44:00","13:18:26"],["179919","PLASMA/LASER","LASER","14/05/2026",0.1367,3,"15:50:56","15:53:40"],["179920","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:50","07:33:34"],["179920","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:33:24","16:34:55"],["179920","PLASMA/LASER","LASER","15/05/2026",0.0725,3,"07:36:28","07:37:55"],["179921","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:25:32","17:30:24"],["179921","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:30:20","16:31:51"],["179922","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:51:39","11:23:19"],["179923","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:23:20","11:26:01"],["179924","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:24:21","14:21:14"],["179924","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:52:54","10:06:19"],["179925","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179925","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179925","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179925","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179925","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179928","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:48:21","13:55:14"],["179928","PLASMA/LASER","LASER","14/05/2026",0.1342,3,"11:31:26","11:34:07"],["179929","PLASMA/LASER","LASER","14/05/2026",0.18,3,"15:21:38","15:25:14"],["179930","PLASMA/LASER","LASER","14/05/2026",0.18,3,"14:56:19","14:59:55"],["179931","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:28:51","14:24:29"],["179931","PLASMA/LASER","LASER","14/05/2026",0.0767,3,"08:15:41","08:17:13"],["179932","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:15:03","08:21:53"],["179932","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"17:01:12","17:02:43"],["179933","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:58","08:03:18"],["179933","PLASMA/LASER","LASER","14/05/2026",0.18,3,"17:47:49","17:51:25"],["179934","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:30:25","17:35:17"],["179934","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:08:29","16:09:53"],["179935","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179935","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179935","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179935","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179935","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179936","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"10:30:21","13:42:14"],["179936","PLASMA/LASER","LASER","14/05/2026",0.1525,3,"11:49:21","13:07:27"],["179937","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:18:55","14:23:46"],["179938","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179938","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179938","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179938","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179938","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179939","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179939","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179939","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179939","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179939","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179940","PLASMA/LASER","LASER","15/05/2026",0.11,3,"07:40:33","07:42:45"],["179941","PLASMA/LASER","LASER","15/05/2026",0.11,3,"07:42:46","07:44:58"],["179942","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179942","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179942","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179942","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179942","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179943","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179943","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179943","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179943","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179943","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179944","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:15:04","08:25:36"],["179944","PLASMA/LASER","LASER","14/05/2026",0.3317,3,"16:34:56","17:40:34"],["179945","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:51","07:37:17"],["179945","PLASMA/LASER","LASER","14/05/2026",0.4175,3,"16:28:08","17:44:11"],["179946","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179946","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179946","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179946","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179946","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179948","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:53","07:44:43"],["179948","PLASMA/LASER","LASER","14/05/2026",0.2217,3,"15:59:59","16:47:23"],["179949","PLASMA/LASER","LASER","14/05/2026",0.18,3,"17:11:39","17:15:15"],["179950","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179950","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179950","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179950","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179950","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179951","PLASMA/LASER","LASER","14/05/2026",0.1775,3,"08:54:09","10:08:39"],["179952","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:47:24","16:48:55"],["179953","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:14:59","08:07:01"],["179953","PLASMA/LASER","LASER","15/05/2026",0.11,3,"07:38:20","07:40:32"],["179954","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179954","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179954","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179954","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179954","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179955","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:58:56","13:22:02"],["179956","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"14:33:31","14:38:22"],["179957","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:34:40","13:16:11"],["179958","SERRA FITA","SERRA","14/05/2026",0.0889,1,"08:36:32","13:16:38"],["179959","PLASMA/LASER","LASER","14/05/2026",0.2425,3,"13:39:59","13:44:50"],["179960","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179960","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179960","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179960","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179960","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179961","MONTAGEM","MONTAGEM MECANICA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179961","PINTURA","ACABAMENTO","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179961","PINTURA","PINTURA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179961","SOLDA","PRÉ-MONTAGEM","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179961","SOLDA","SOLDA","20/05/2026",0.0,1,"00:00:00","00:00:00"],["179962","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:15:05","08:29:19"],["179962","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:09:54","16:11:18"],["179962","PLASMA/LASER","LASER","15/05/2026",0.0725,3,"07:32:04","07:33:31"],["179963","CORTE E DOBRA","DOBRA","14/05/2026",0.1103,1,"16:52:22","16:58:59"],["179963","PLASMA/LASER","LASER","14/05/2026",0.07,3,"16:11:19","16:12:43"],["179964","CORTE E DOBRA","DOBRA","14/05/2026",0.0811,1,"17:35:18","17:40:10"],["179964","PLASMA/LASER","LASER","14/05/2026",0.0758,3,"16:36:28","16:37:59"],["179965","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:15:00","08:10:44"],["179965","PLASMA/LASER","LASER","14/05/2026",0.2558,3,"16:38:00","17:47:48"],["179966","CORTE E DOBRA","DOBRA","15/05/2026",0.1233,2,"07:15:01","08:14:27"],["179966","PLASMA/LASER","LASER","14/05/2026",0.25,3,"16:01:24","17:18:52"],["179967","CORTE E DOBRA","DOBRA","14/05/2026",0.1103,1,"16:59:00","17:05:37"],["179967","PLASMA/LASER","LASER","14/05/2026",0.2067,3,"15:53:41","16:04:13"],["179968","CORTE E DOBRA","DOBRA","14/05/2026",0.2572,2,"11:55:51","14:43:59"],["179968","PLASMA/LASER","LASER","14/05/2026",0.3117,3,"08:59:09","11:28:43"],["179969","CORTE E DOBRA","DOBRA","15/05/2026",0.1017,1,"08:41:45","09:24:51"],["179969","PLASMA/LASER","LASER","15/05/2026",0.0908,3,"07:52:37","07:54:26"],["182004","ADMINISTRAÇÃO DA PRODUÇÃO","CARREGAMENTO","20/05/2026",5.0,1,"13:00:00","18:00:00"],["182004","MONTAGEM","EMBALAGEM","20/05/2026",4.5,1,"07:15:00","12:00:00"]];
+function seed(){
+  RAW_EST=B_EST.map(r=>Object.fromEntries(COLS_EST.map((c,i)=>[c,r[i]])));
+  RAW_AP=B_AP.map(r=>({'OF':r[0],'Centro de Custo':'','Descrição Centro de Custo':r[1],
+    'Funcionário':'','Nome Funcionário':'','Data':r[3],'Inicio':r[6],'Final':r[7],
+    'Produto':'','Descrição':'','Descrição da Atividade':r[2],'Tempo':r[4]}));
+  ORIGENS=[{arq:'2RTA · Irio Dal Maso (exemplo)',tipo:'ambos',
+    quando:new Date().toISOString(),novas:RAW_EST.length+RAW_AP.length,dup:0}];
+}
+if(!carregaBase())seed();
+reconstruir();
+atualizaFonte();
+</script>
+</body>
+</html>
